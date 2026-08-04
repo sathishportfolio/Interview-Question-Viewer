@@ -1,0 +1,1144 @@
+/* Extracted from InterviewQuestionViewer_v24.html. Structure/variables unchanged. */
+
+:root {
+  --ink: #1c1f26;
+  --paper: #f6f5f1;
+  --line: #d8d5cc;
+  --accent: #3457d5;
+  --done: #d7f3df;
+  --done-line: #5cb87a;
+  --review: #fdf1c7;
+  --review-line: #d9a441;
+  --hover: #dbeafe;
+  --flash: #ffe066;
+  --flash-line: #e0a800;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* App header is now always fixed/floating at the top of the viewport. */
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1045;
+  border-bottom: 2px solid var(--ink);
+  padding: 1.25rem 0;
+  margin-bottom: 0;
+  background: var(--paper);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .15);
+}
+
+.app-header h1 {
+  font-weight: 800;
+  letter-spacing: -.02em;
+  margin: 0;
+}
+
+.app-header p {
+  margin: .15rem 0 0;
+  color: #5a5f6b;
+}
+
+/* Requirement #3: shows the currently open Subject / Topic / SubTopic chain */
+.header-breadcrumb {
+  margin: .3rem 0 0;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--accent);
+  min-height: 1.1rem;
+}
+
+/* Requirement: the Active Question's breadcrumb link (appendActiveQuestionBreadcrumbLink(),
+   js/components/tree.js) — green like its flag icon, distinct from the plain accent-colored
+   Subject/Topic/SubTopic chain text it sits alongside. */
+.active-question-breadcrumb-link {
+  color: #2fb350;
+  text-decoration: none;
+}
+
+.active-question-breadcrumb-link:hover {
+  color: #2fb350;
+  text-decoration: underline;
+}
+
+/* Requirement: red instead of green whenever the active question is currently hidden by an
+   active filter (isAvailable check, appendActiveQuestionBreadcrumbLink(), js/components/tree.js)
+   — reverts to the normal green the moment a filter change makes it reachable again. */
+.active-question-breadcrumb-link.is-unavailable,
+.active-question-breadcrumb-link.is-unavailable:hover {
+  color: #dc3545;
+}
+
+.active-question-breadcrumb-link i {
+  margin-right: .25rem;
+}
+
+.toolbar-card,
+.filter-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+}
+
+.accordion-button {
+  font-weight: 600;
+}
+
+.accordion-button:not(.collapsed) {
+  background-color: #eef1fb;
+  color: var(--accent);
+  box-shadow: none;
+}
+
+.accordion-button:focus {
+  box-shadow: 0 0 0 .2rem rgba(52, 87, 213, .2);
+}
+
+/* question level styling */
+.q-item .accordion-header {
+  display: flex;
+  align-items: stretch;
+}
+
+#flatGroupedView .q-item .accordion-button {
+  padding-left: 15px;
+}
+
+/* Requirement: the flatten-view path heading ("Subject/Topic/SubTopic") is a plain label, not
+   an accordion header — it never collapses, so it reads as a section divider rather than
+   another clickable control. */
+#flatGroupedView .flat-group-path {
+  font-weight: 700;
+  font-size: .95rem;
+  color: var(--accent);
+  margin: 1.6rem 0 .5rem;
+  padding-bottom: .3rem;
+  border-bottom: 1px solid var(--line);
+}
+
+#flatGroupedView .flat-group-path:first-child {
+  margin-top: 0;
+}
+
+.q-item .accordion-button {
+  padding-left: 0px;
+  font-weight: 500;
+  transition: background-color .15s ease;
+  width: auto;
+  flex: 1 1 auto;
+}
+
+/* Requirement: collapse/expand is triggered by clicking the question text only (see the
+   `button` click listener in createQuestion(), js/components/tree.js) — styled to look like a
+   plain text link (underline on hover) rather than a full-color hyperlink, since color is
+   already carrying the Done/Review-Later status meaning on this row. */
+.q-text-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.q-text-link:hover {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.q-item .accordion-button:hover {
+  background-color: var(--hover) !important;
+}
+
+.q-item.status-done .accordion-button {
+  background-color: var(--done) !important;
+  border-left: 4px solid var(--done-line);
+}
+
+.q-item.status-review .accordion-button {
+  background-color: var(--review) !important;
+  border-left: 4px solid var(--review-line);
+}
+
+.q-item.status-done .accordion-button:hover {
+  background-color: #c5edd0 !important;
+}
+
+.q-item.status-review .accordion-button:hover {
+  background-color: #fbe8ab !important;
+}
+
+.answer-body {
+  background: #fbfbfa;
+  padding-top: 2rem;
+}
+
+.empty-state {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #888;
+}
+
+.badge-count {
+  font-weight: 500;
+}
+
+.badge-holder {
+  display: inline-flex;
+  align-items: center;
+}
+
+.select2-container--default .select2-selection--multiple {
+  border: 1px solid #ced4da;
+  border-radius: .375rem;
+  min-height: 38px;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+  background-color: var(--accent);
+  border: none;
+  color: #fff;
+  border-radius: .35rem;
+  padding: 2px 8px;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+  color: #fff;
+  margin-right: 6px;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+  color: #fff;
+  background-color: transparent;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__display {
+  cursor: default;
+  padding-left: 18px;
+  padding-right: 2px;
+}
+
+/* checkbox controls moved inside answer body */
+.status-controls {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  font-size: .9rem;
+  margin-bottom: .75rem;
+  padding-bottom: .5rem;
+  padding-top: 2rem;
+  border-top: 1px dashed var(--line);
+  margin-top: 2em;
+}
+
+.status-controls label {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* icon-toggle status controls (Done / Review Later / Duplicate / Less Important / Starred) */
+.status-icon-row {
+  display: flex;
+  gap: 1.4rem;
+  align-items: flex-start;
+  margin-bottom: 1.1rem;
+  padding: .35rem 0 0;
+  flex-wrap: wrap;
+}
+
+.status-icon-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .2rem;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.status-icon-btn .icon-glyph {
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: #eceef2;
+  color: #9aa0ab;
+  border: 1px solid #dfe2e8;
+  transition: transform .12s ease, background-color .12s ease, color .12s ease, border-color .12s ease;
+}
+
+.status-icon-btn:hover .icon-glyph {
+  transform: scale(1.08);
+}
+
+.status-icon-btn .icon-label {
+  font-size: .68rem;
+  color: #6c757d;
+  white-space: nowrap;
+}
+
+/* Requirement: each status icon gets its own distinct color (a muted tint at rest) instead
+   of a uniform grey, so the icon's function is recognizable even before it's toggled on. */
+.status-icon-btn.icon-done .icon-glyph {
+  background: #eafbf0;
+  border-color: #cdf0da;
+  color: #2fb350;
+}
+
+.status-icon-btn.icon-review .icon-glyph {
+  background: #fef6e6;
+  border-color: #fbe6b8;
+  color: #f0a202;
+}
+
+.status-icon-btn.icon-duplicate .icon-glyph {
+  background: #fdeaea;
+  border-color: #f8c9c9;
+  color: red;
+}
+
+.status-icon-btn.icon-less .icon-glyph {
+  background: #ffece3;
+  border-color: #ffcdb8;
+  color: orangered;
+}
+
+.status-icon-btn.icon-star .icon-glyph {
+  background: #fff8e1;
+  border-color: #ffe7a0;
+  color: #c9930a;
+}
+
+.status-icon-btn.icon-search .icon-glyph {
+  background: #eaf1fb;
+  border-color: #cfe0f5;
+  color: var(--accent);
+}
+
+.status-icon-btn.icon-copy .icon-glyph {
+  background: #e3f8fa;
+  border-color: #b8ecf0;
+  color: #0aa2b8;
+}
+
+.status-icon-btn.icon-flag .icon-glyph {
+  background: #eafbf0;
+  border-color: #cdf0da;
+  color: #2fb350;
+}
+
+.status-icon-btn.icon-delete .icon-glyph {
+  background: #fdeaea;
+  border-color: #f8c9c9;
+  color: #dc3545;
+}
+
+.status-icon-btn.icon-move .icon-glyph {
+  background: #f1ebfb;
+  border-color: #ddccf3;
+  color: #6f42c1;
+}
+
+.status-icon-btn.icon-collapse-all .icon-glyph {
+  background: #eceef2;
+  border-color: #dfe2e8;
+  color: #6c757d;
+}
+
+/* Hover state: highlight using the icon's own active/full color, whether or not it's
+   currently toggled on. */
+.status-icon-btn.icon-done:hover .icon-glyph {
+  background: #2fb350;
+  border-color: #2fb350;
+  color: #fff;
+}
+
+.status-icon-btn.icon-review:hover .icon-glyph {
+  background: #f0a202;
+  border-color: #f0a202;
+  color: #fff;
+}
+
+.status-icon-btn.icon-duplicate:hover .icon-glyph {
+  background: red;
+  border-color: red;
+  color: #fff;
+}
+
+.status-icon-btn.icon-less:hover .icon-glyph {
+  background: orangered;
+  border-color: orangered;
+  color: #fff;
+}
+
+.status-icon-btn.icon-star:hover .icon-glyph {
+  background: #ffd23f;
+  border-color: #e6bc2e;
+  color: #7a5c00;
+}
+
+.status-icon-btn.icon-delete:hover .icon-glyph {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: #fff;
+}
+
+.status-icon-btn.icon-search:hover .icon-glyph {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.status-icon-btn.icon-copy:hover .icon-glyph {
+  background: #0aa2b8;
+  border-color: #0aa2b8;
+  color: #fff;
+}
+
+.status-icon-btn.icon-flag:hover .icon-glyph {
+  background: #2fb350;
+  border-color: #2fb350;
+  color: #fff;
+}
+
+.status-icon-btn.icon-move:hover .icon-glyph {
+  background: #6f42c1;
+  border-color: #6f42c1;
+  color: #fff;
+}
+
+.status-icon-btn.icon-collapse-all:hover .icon-glyph {
+  background: #6c757d;
+  border-color: #6c757d;
+  color: #fff;
+}
+
+.status-icon-btn.icon-done.is-active .icon-glyph {
+  background: #2fb350;
+  border-color: #2fb350;
+  color: #fff;
+}
+
+.status-icon-btn.icon-review.is-active .icon-glyph {
+  background: #f0a202;
+  border-color: #f0a202;
+  color: #fff;
+}
+
+.status-icon-btn.icon-duplicate.is-active .icon-glyph {
+  background: red;
+  border-color: red;
+  color: #fff;
+}
+
+.status-icon-btn.icon-less.is-active .icon-glyph {
+  background: orangered;
+  border-color: orangered;
+  color: #fff;
+}
+
+.status-icon-btn.icon-star.is-active .icon-glyph {
+  background: #ffd23f;
+  border-color: #e6bc2e;
+  color: #7a5c00;
+}
+
+.status-icon-btn.icon-flag.is-active .icon-glyph {
+  background: #2fb350;
+  border-color: #2fb350;
+  color: #fff;
+}
+
+/* Requirement: the flag icon is only ever shown once a question is actually the Active Question
+   (it never sets on click, only clears — see flagBtn/setActiveQuestion() in createQuestion(),
+   js/components/tree.js) — hidden the rest of the time rather than shown dim/inactive. */
+.status-icon-btn.icon-flag.compact {
+  display: none;
+}
+
+.status-icon-btn.icon-flag.compact.is-active {
+  display: flex;
+}
+
+/* Requirement: the "Collapse all accordions" button next to the flag icon only makes sense
+   once a question is actually flagged as Active — same visibility rule as the flag icon
+   itself, but keyed off the flag icon's own is-active class via the adjacent-sibling
+   combinator (rather than a second is-active toggle of its own) since this button never
+   changes its own state, it just mirrors the flag's. */
+.status-icon-btn.icon-collapse-all.compact {
+  display: none;
+}
+
+.status-icon-btn.icon-flag.compact.is-active + .status-icon-btn.icon-collapse-all.compact {
+  display: flex;
+}
+
+.status-icon-btn.icon-done.is-active .icon-label,
+.status-icon-btn.icon-review.is-active .icon-label,
+.status-icon-btn.icon-star.is-active .icon-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* compact variant: inline, icon-only, sits between the drag handle and question text */
+.status-icon-row.compact {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: .4rem;
+  margin: 0;
+  padding: 0 .6rem;
+  flex: 0 0 auto;
+}
+
+.status-icon-row.compact .status-icon-btn {
+  flex-direction: row;
+}
+
+.status-icon-row.compact .icon-glyph {
+  width: 1.65rem;
+  height: 1.65rem;
+  font-size: .8rem;
+}
+
+/* Requirement: sleeker header — cluster the non-destructive status toggles into one pill,
+   and set the destructive Delete action apart with a divider so it's never a mis-click. */
+.status-icon-row.compact .status-cluster {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .2rem .45rem;
+  background: #f0f1f4;
+  border-radius: 1rem;
+}
+
+.status-icon-row.compact .icon-delete {
+  margin-left: .55rem;
+  padding-left: .55rem;
+  border-left: 1px solid var(--line);
+}
+
+
+/* drag handle for sortable questions */
+.drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  flex: 0 0 auto;
+  cursor: grab;
+  color: #9aa0ab;
+  font-size: 1.1rem;
+  background: #fbfbfa;
+  border: 1px solid var(--line);
+  border-right: none;
+  user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.q-item .accordion-header {
+  align-items: stretch;
+}
+
+.q-item.sortable-ghost {
+  opacity: .4;
+}
+
+.q-item.sortable-chosen .drag-handle {
+  background: var(--hover);
+}
+
+/* Requirement #1: small rename (pencil) button on Subject/Topic/SubTopic headers */
+.tree-edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  flex: 0 0 auto;
+  cursor: pointer;
+  color: #6c757d;
+  font-size: .95rem;
+  background: #fbfbfa;
+  border: 1px solid var(--line);
+  border-left: none;
+}
+
+.tree-edit-btn:hover {
+  background: var(--hover);
+  color: var(--accent);
+}
+
+/* Requirement: delete a whole Subject/Topic/SubTopic (and everything under it) from its own
+   header — same shape as .tree-edit-btn/.tree-copy-btn, but red-on-hover since this one's
+   destructive, matching .icon-delete's color story elsewhere in the app. */
+.tree-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  flex: 0 0 auto;
+  cursor: pointer;
+  color: #6c757d;
+  font-size: .95rem;
+  background: #fbfbfa;
+  border: 1px solid var(--line);
+  border-left: none;
+}
+
+.tree-delete-btn:hover {
+  background: #fdeaea;
+  color: #dc3545;
+}
+
+/* drag-to-reorder for the Subject / Topic / SubTopic tree accordions themselves */
+.tree-item>.accordion-header {
+  display: flex;
+  align-items: stretch;
+}
+
+.tree-item>.accordion-header .accordion-button {
+  width: auto;
+  flex: 1 1 auto;
+}
+
+.tree-item.sortable-ghost {
+  opacity: .4;
+}
+
+.tree-item.sortable-chosen>.accordion-header .drag-handle {
+  background: var(--hover);
+}
+
+.less-important-icon {
+  margin-left: .4rem;
+}
+
+.star-icon {
+  margin-left: .4rem;
+  color: #d9a441;
+}
+
+.app-header .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.timer-widget {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  padding: .5rem .75rem;
+}
+
+.timer-display {
+  font-family: 'Consolas', monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  min-width: 5.5ch;
+  text-align: center;
+}
+
+.add-question-wrap {
+  border-bottom: 1px dashed var(--line);
+  margin-bottom: .6rem;
+}
+
+.add-question-panel {
+  background: #fbfbfa;
+  border: 1px solid var(--line);
+  border-radius: .4rem;
+  padding: .75rem;
+  margin-bottom: .5rem;
+}
+
+.star-toggle-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 .25rem;
+}
+
+/* Requirement #2: fixed floating toggles, bottom-right, each a standard Bootstrap icon
+   button (btn btn-outline-secondary btn-rounded) — Edit Icon shows/hides editing affordances
+   (drag handles, edit question/answer + move controls, add-new panels); Focus Mode hides the
+   toolbar/filter/add-new cards for a distraction-free view. The two checkbox-driven ones keep
+   their real checkbox input (visually hidden, still keyboard/click accessible via the wrapping
+   label) — :has(input:checked) is what communicates on/off now that Bootstrap's own button
+   classes provide the base look, since Bootstrap's .btn-check+.btn adjacent-sibling selector
+   doesn't match this nested (label > input) structure. */
+.floating-toggles {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .7rem;
+}
+
+.btn-rounded {
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
+}
+
+.floating-toggle-item {
+  cursor: pointer;
+  user-select: none;
+}
+
+.floating-toggle-item:has(input:checked) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.global-alert-holder {
+  position: fixed;
+  top: 6.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  width: min(90vw, 480px);
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.tree-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  flex: 0 0 auto;
+  cursor: pointer;
+  color: #6c757d;
+  font-size: .95rem;
+  background: #fbfbfa;
+  border: 1px solid var(--line);
+  border-left: none;
+}
+
+.tree-copy-btn:hover {
+  background: var(--hover);
+  color: var(--accent);
+}
+
+.subtopic-alert-holder .alert {
+  font-size: .9rem;
+  padding: .55rem .9rem;
+}
+
+.subtopic-alert-holder .alert-link {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Fuzzy-duplicate suggestions: collapsible Subject > Topic > SubTopic groups, one question
+   per row, capped at 10 questions total (see findFuzzyMatches). */
+.fuzzy-hint-label {
+  font-weight: 600;
+  margin-bottom: .25rem;
+}
+
+.fuzzy-hint-group {
+  margin-bottom: .2rem;
+}
+
+.fuzzy-hint-group-header {
+  display: block;
+  cursor: pointer;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.fuzzy-hint-group-header:hover {
+  text-decoration: underline;
+}
+
+.fuzzy-hint-group-header::before {
+  content: "▸ ";
+  display: inline-block;
+  transition: transform .12s ease;
+}
+
+.fuzzy-hint-group-header.is-open::before {
+  content: "▾ ";
+}
+
+.fuzzy-hint-group-list {
+  padding-left: 1.1rem;
+  border-left: 2px solid var(--line);
+  margin: .15rem 0 .3rem;
+}
+
+.fuzzy-hint-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .4rem;
+  padding: .1rem 0;
+}
+
+.fuzzy-hint-row .alert-link {
+  cursor: pointer;
+  text-decoration: underline;
+  flex: 1 1 auto;
+}
+
+/* Requirement: icon-only "Add Question After" link — creates and auto-saves a new question
+   directly after this matched one, in its own SubTopic. */
+.fuzzy-hint-add-after {
+  flex: 0 0 auto;
+  color: #6c757d;
+  cursor: pointer;
+  font-size: .9rem;
+  padding: 0 .2rem;
+}
+
+.fuzzy-hint-add-after:hover {
+  color: var(--accent);
+}
+
+/* Requirement: flag exact-text fuzzy matches (real duplicates, not just related questions)
+   with a yellow highlight so they stand out from the merely-similar ones. */
+.fuzzy-hint-row.exact-match .alert-link {
+  background: var(--flash);
+  padding: .05rem .3rem;
+  border-radius: .2rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Requirement: flash-highlight must span the ENTIRE accordion header (not just the button),
+   so it needs to sit on top of every header child — drag handle, icon rows, edit/copy
+   buttons — each of which paints its own opaque background. A positioned overlay covering
+   the whole header, above everything, is the only way to guarantee that regardless of which
+   children happen to be present on a given header. */
+.accordion-header {
+  position: relative;
+}
+
+.flash-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--flash);
+  opacity: .7;
+  pointer-events: none;
+  z-index: 3;
+  transition: opacity 9.5s ease-out;
+}
+
+.flash-overlay.fade {
+  opacity: 0;
+}
+
+/* Action icons shown over a flash-highlighted header — a dismiss (x) is always present; the
+   jump-back/add-anyway icons join it depending on what triggered the flash. All fade out
+   together with the flash overlay. Default: a normal in-flow flex child (inserted right
+   before the status-cluster/delete icons in flashHighlightItem), positioned only enough to
+   paint above the flash-overlay tint — NOT overlapping any other header content. */
+.flash-action-icons {
+  position: relative;
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: .35rem;
+  margin: 0 .4rem;
+  z-index: 4;
+  opacity: 1;
+  transition: opacity 9.5s ease-out;
+}
+
+.flash-action-icons.fade {
+  opacity: 0;
+}
+
+/* Fallback for headers with no status-cluster to insert before (tree headers, or a plain
+   surface like the add-question-wrap) — overlays the right edge instead. */
+.flash-action-icons.flash-action-icons-overlay {
+  position: absolute;
+  top: 50%;
+  right: .5rem;
+  transform: translateY(-50%);
+  margin: 0;
+}
+
+.flash-action-icon-btn {
+  border: none;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, .3);
+  font-size: .8rem;
+}
+
+.flash-action-icon-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.flash-action-icon-btn.flash-dismiss-btn {
+  color: #6c757d;
+}
+
+.flash-action-icon-btn.flash-dismiss-btn:hover {
+  background: #dc3545;
+  color: #fff;
+}
+
+/* Requirement: index numbers on question accordions, hidden while Edit Mode is on
+   (dragging/editing) and re-shown once it's off, always reflecting the latest order. */
+.q-index {
+  margin-right: .5rem;
+  font-weight: 700;
+  color: #8a8f99;
+}
+
+body:not(.edit-mode-off) .q-index {
+  display: none;
+}
+
+
+/* Requirement: holder is the flex row itself — badgesGroup (left) and actionsGroup (right,
+   ms-auto) are its two children (updateGlobalStatsBadges(), js/components/stats.js). */
+.global-stats-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: .75rem;
+}
+
+/* Requirement: compact badges — smaller font/padding than Bootstrap's default .badge, with the
+   nested .badge-light count sized down to match instead of inheriting the outer badge's size. */
+.global-stats-badges .badge {
+  font-size: .75rem;
+  padding: .3em .55em;
+}
+
+.global-stats-badges .badge .badge-light {
+  font-size: .7rem;
+  padding: .15em .4em;
+}
+
+.global-stats-badges .stat-badge-clickable {
+  cursor: pointer;
+  transition: filter .12s ease;
+}
+
+.global-stats-badges .stat-badge-clickable:hover {
+  filter: brightness(1.12);
+}
+
+/* Requirement: Bootstrap 4's .badge-light doesn't exist in Bootstrap 5 (this project's
+   version) — defined locally for the nested count badges inside #globalStatsBadges
+   (updateGlobalStatsBadges(), js/components/stats.js) since that's the exact class name asked
+   for. Light background + dark text so the count reads clearly against every badge's own color. */
+.badge-light {
+  background-color: #f8f9fa;
+  color: #212529;
+}
+
+/* Requirement: the copy-export buttons in #globalStatsBadges (updateGlobalStatsBadges(),
+   js/components/stats.js — Plain/Structure/Hierarchy/etc., all real <button>s, unlike the
+   badges themselves which are <span>s and so unaffected by this selector) are hidden while
+   Edit Mode is OFF, same as every other body.edit-mode-off rule above. */
+body.edit-mode-off #globalStatsBadges button {
+  display: none;
+}
+
+.floating-toggle-item .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Requirement: Focus Mode was removed as a separate toggle — Edit Mode OFF now also applies
+   what used to be Focus Mode's hiding (.toolbar-card/.add-question-wrap), plus
+   hides the editing-only tree/question actions (.tree-copy-btn, .tree-delete-btn, the
+   question-level Delete/Move/Duplicate icons) — Edit Mode is now the one visibility toggle: ON
+   shows everything, OFF hides all of it. Deliberately does NOT hide .editModeToggle itself
+   (unlike the old focus-mode rule it replaces) — hiding the only remaining toggle while it's
+   off would trap the user unable to turn it back on. Targets .toolbar-card specifically, NOT
+   #controlsWrapper itself — #filterCardToggleLink and #filterCard both live inside
+   #controlsWrapper too, but must stay visible/toggleable while Edit Mode is OFF (see the
+   #filterCard rules below), which a display:none on their ancestor would make impossible. */
+body.edit-mode-off .drag-handle,
+body.edit-mode-off .status-controls,
+body.edit-mode-off .quick-add-row,
+body.edit-mode-off .tree-edit-btn,
+body.edit-mode-off .tree-delete-btn,
+body.edit-mode-off .tree-copy-btn,
+body.edit-mode-off .select-toggle-btn,
+body.edit-mode-off .q-select-checkbox,
+body.edit-mode-off .bulk-move-bar,
+body.edit-mode-off .icon-duplicate,
+body.edit-mode-off .icon-move,
+body.edit-mode-off .icon-delete,
+body.edit-mode-off .toolbar-card,
+body.edit-mode-off .add-question-wrap {
+  display: none !important;
+}
+
+/* Requirement: #filterCard (Subject/Topic/SubTopic/Status filters) is hidden by default and
+   toggleable via #filterCardToggleLink (app.js) while Edit Mode is OFF — no forced-hide rule
+   here, its default `style="display:none"` (index.html) plus the link's own inline-style toggle
+   is what governs visibility in that state. While Edit Mode is ON, it's always forced visible
+   regardless of the link's toggle state, and the link itself is hidden since it'd have nothing
+   left to usefully toggle. */
+body:not(.edit-mode-off) #filterCard {
+  display: block !important;
+}
+
+body:not(.edit-mode-off) #filterCardToggleLink {
+  display: none !important;
+}
+
+/* Requirement: bulk-select checkbox on each question, only shown once its SubTopic's "Select"
+   toggle turns selection mode on (see selectToggleBtn/createQuestion() in tree.js). */
+.q-select-checkbox {
+  display: none;
+  align-self: center;
+  margin: 0 .5rem 0 .25rem;
+  flex: 0 0 auto;
+}
+
+[data-sub-topic].selecting .q-select-checkbox {
+  display: inline-block;
+}
+
+/* Requirement: Universal Selection Controls — the same checkbox treatment as .q-select-checkbox
+   above, one level at a time: a Subject's own checkbox (root "Select" toggle, gated on
+   #subjectAccordion), a Topic's own checkbox (gated on its parent Subject item), and a
+   SubTopic's own checkbox (gated on its parent Topic item). See createGroupSelectionUI() in
+   tree.js for the shared toolbar/bulk-bar logic all three (and Subjects) share. */
+.subject-select-checkbox,
+.topic-select-checkbox,
+.subtopic-select-checkbox {
+  display: none;
+  align-self: center;
+  margin: 0 .5rem 0 .25rem;
+  flex: 0 0 auto;
+}
+
+#subjectAccordion.selecting .subject-select-checkbox,
+[data-subject].selecting .topic-select-checkbox,
+[data-topic].selecting .subtopic-select-checkbox {
+  display: inline-block;
+}
+
+body.edit-mode-off .subject-select-checkbox,
+body.edit-mode-off .topic-select-checkbox,
+body.edit-mode-off .subtopic-select-checkbox {
+  display: none !important;
+}
+
+/* Requirement: bulk drag-handle bar — appears once 1+ questions are checked, drags the whole
+   selection at once into any SubTopic header (open or collapsed). */
+.bulk-move-bar {
+  display: none;
+  align-items: center;
+  gap: .6rem;
+  background: #eaf1fb;
+  border: 1px solid #cfe0f5;
+  border-radius: .4rem;
+  padding: .4rem .6rem;
+  margin-bottom: .6rem;
+}
+
+.bulk-move-bar .bulk-drag-handle {
+  border: 1px solid var(--line);
+  border-radius: .3rem;
+  background: #fff;
+}
+
+/* Requirement: the Done/Review Later/Duplicate/Less Important quick-action icons sit between
+   the label and Move/Delete/Clear, set apart with a divider so they don't blend into the
+   destructive/close actions beside them. */
+.bulk-move-bar .status-icon-row.compact {
+  padding: 0;
+  margin-left: .2rem;
+  padding-left: .8rem;
+  border-left: 1px solid #cfe0f5;
+}
+
+.bulk-move-label {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Requirement: the Change Subject/Topic/SubTopic form's three listboxes sit side by side
+   instead of stacking, so picking a hierarchy doesn't need scrolling through three separate
+   full-width blocks — wraps to multiple lines on narrow viewports instead of overflowing. */
+.move-picker-row {
+  flex-wrap: wrap;
+}
+
+.move-picker-col {
+  flex: 1 1 160px;
+  min-width: 140px;
+}
+
+/* Requirement: a SubTopic header lights up while a drag is hovering over it as a valid drop
+   target — the only visual cue available for a collapsed destination, which has no visible
+   list of its own to show a Sortable ghost/placeholder in. A plain outline/border on the header
+   itself gets painted over by the header's own in-flow children (drag handle, edit/copy
+   buttons, the accordion-button), which each fill the header edge-to-edge with an opaque
+   background — same problem .flash-overlay already solves below, same fix: an absolutely-
+   positioned overlay sibling, above everything, instead of styling the header's own box. */
+.drop-target-highlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 2px dashed var(--accent);
+  border-radius: 2px;
+  z-index: 4;
+  display: none;
+}
+
+.drop-target-highlight.is-active {
+  display: block;
+}
+

@@ -1,0 +1,4570 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interview Question Viewer</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <style>
+    :root {
+      --ink: #1c1f26;
+      --paper: #f6f5f1;
+      --line: #d8d5cc;
+      --accent: #3457d5;
+      --done: #d7f3df;
+      --done-line: #5cb87a;
+      --review: #fdf1c7;
+      --review-line: #d9a441;
+      --hover: #dbeafe;
+      --flash: #ffe066;
+      --flash-line: #e0a800;
+    }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    /* App header is now always fixed/floating at the top of the viewport. */
+    .app-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1045;
+      border-bottom: 2px solid var(--ink);
+      padding: 1.25rem 0;
+      margin-bottom: 0;
+      background: var(--paper);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, .15);
+    }
+
+    .app-header h1 {
+      font-weight: 800;
+      letter-spacing: -.02em;
+      margin: 0;
+    }
+
+    .app-header p {
+      margin: .15rem 0 0;
+      color: #5a5f6b;
+    }
+
+    /* Requirement #3: shows the currently open Subject / Topic / Level chain */
+    .header-breadcrumb {
+      margin: .3rem 0 0;
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--accent);
+      min-height: 1.1rem;
+    }
+
+    .toolbar-card,
+    .filter-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: .5rem;
+    }
+
+    .accordion-button {
+      font-weight: 600;
+    }
+
+    .accordion-button:not(.collapsed) {
+      background-color: #eef1fb;
+      color: var(--accent);
+      box-shadow: none;
+    }
+
+    .accordion-button:focus {
+      box-shadow: 0 0 0 .2rem rgba(52, 87, 213, .2);
+    }
+
+    /* question level styling */
+    .q-item .accordion-header {
+      display: flex;
+      align-items: stretch;
+    }
+
+    #starredAccordion .q-item .accordion-button {
+      padding-left: 15px;
+    }
+
+    .q-item .accordion-button {
+      padding-left: 0px;
+      font-weight: 500;
+      transition: background-color .15s ease;
+      width: auto;
+      flex: 1 1 auto;
+    }
+
+    .q-item .accordion-button:hover {
+      background-color: var(--hover) !important;
+    }
+
+    .q-item.status-done .accordion-button {
+      background-color: var(--done) !important;
+      border-left: 4px solid var(--done-line);
+    }
+
+    .q-item.status-review .accordion-button {
+      background-color: var(--review) !important;
+      border-left: 4px solid var(--review-line);
+    }
+
+    .q-item.status-done .accordion-button:hover {
+      background-color: #c5edd0 !important;
+    }
+
+    .q-item.status-review .accordion-button:hover {
+      background-color: #fbe8ab !important;
+    }
+
+    .answer-body {
+      background: #fbfbfa;
+      padding-top: 2rem;
+    }
+
+    .empty-state {
+      padding: 3rem 1rem;
+      text-align: center;
+      color: #888;
+    }
+
+    .badge-count {
+      font-weight: 500;
+    }
+
+    .badge-holder {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .select2-container--default .select2-selection--multiple {
+      border: 1px solid #ced4da;
+      border-radius: .375rem;
+      min-height: 38px;
+    }
+
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+      background-color: var(--accent);
+      border: none;
+      color: #fff;
+      border-radius: .35rem;
+      padding: 2px 8px;
+    }
+
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+      color: #fff;
+      margin-right: 6px;
+    }
+
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+      color: #fff;
+      background-color: transparent;
+    }
+
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__display {
+      cursor: default;
+      padding-left: 18px;
+      padding-right: 2px;
+    }
+
+    /* checkbox controls moved inside answer body */
+    .status-controls {
+      display: flex;
+      gap: 1.25rem;
+      align-items: center;
+      font-size: .9rem;
+      margin-bottom: .75rem;
+      padding-bottom: .5rem;
+      padding-top: 2rem;
+      border-top: 1px dashed var(--line);
+      margin-top: 2em;
+    }
+
+    .status-controls label {
+      display: flex;
+      align-items: center;
+      gap: .35rem;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    /* icon-toggle status controls (Done / Review Later / Duplicate / Less Important / Starred) */
+    .status-icon-row {
+      display: flex;
+      gap: 1.4rem;
+      align-items: flex-start;
+      margin-bottom: 1.1rem;
+      padding: .35rem 0 0;
+      flex-wrap: wrap;
+    }
+
+    .status-icon-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .2rem;
+      border: none;
+      background: none;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .status-icon-btn .icon-glyph {
+      width: 2.15rem;
+      height: 2.15rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      background: #eceef2;
+      color: #9aa0ab;
+      border: 1px solid #dfe2e8;
+      transition: transform .12s ease, background-color .12s ease, color .12s ease, border-color .12s ease;
+    }
+
+    .status-icon-btn:hover .icon-glyph {
+      transform: scale(1.08);
+    }
+
+    .status-icon-btn .icon-label {
+      font-size: .68rem;
+      color: #6c757d;
+      white-space: nowrap;
+    }
+
+    .status-icon-btn.icon-done.is-active .icon-glyph {
+      background: #2fb350;
+      border-color: #2fb350;
+      color: #fff;
+    }
+
+    .status-icon-btn.icon-review.is-active .icon-glyph {
+      background: #f0a202;
+      border-color: #f0a202;
+      color: #fff;
+    }
+
+    .status-icon-btn.icon-duplicate.is-active .icon-glyph {
+      background: #6c757d;
+      border-color: #6c757d;
+      color: #fff;
+    }
+
+    .status-icon-btn.icon-less.is-active .icon-glyph {
+      background: #c9cdd3;
+      border-color: #b7bcc4;
+      color: #4a4f58;
+    }
+
+    .status-icon-btn.icon-star.is-active .icon-glyph {
+      background: #ffd23f;
+      border-color: #e6bc2e;
+      color: #7a5c00;
+    }
+
+    .status-icon-btn.icon-done.is-active .icon-label,
+    .status-icon-btn.icon-review.is-active .icon-label,
+    .status-icon-btn.icon-star.is-active .icon-label {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .status-icon-btn.icon-delete .icon-glyph:hover {
+      background: #dc3545;
+      border-color: #dc3545;
+      color: #fff;
+    }
+
+    .status-icon-btn.icon-search .icon-glyph:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* compact variant: inline, icon-only, sits between the drag handle and question text */
+    .status-icon-row.compact {
+      display: flex;
+      align-items: center;
+      align-self: center;
+      gap: .4rem;
+      margin: 0;
+      padding: 0 .6rem;
+      flex: 0 0 auto;
+    }
+
+    .status-icon-row.compact .status-icon-btn {
+      flex-direction: row;
+    }
+
+    .status-icon-row.compact .icon-glyph {
+      width: 1.65rem;
+      height: 1.65rem;
+      font-size: .8rem;
+    }
+
+    /* Requirement: sleeker header — cluster the non-destructive status toggles into one pill,
+       and set the destructive Delete action apart with a divider so it's never a mis-click. */
+    .status-icon-row.compact .status-cluster {
+      display: flex;
+      align-items: center;
+      gap: .25rem;
+      padding: .2rem .45rem;
+      background: #f0f1f4;
+      border-radius: 1rem;
+    }
+
+    .status-icon-row.compact .icon-delete {
+      margin-left: .55rem;
+      padding-left: .55rem;
+      border-left: 1px solid var(--line);
+    }
+
+
+    /* drag handle for sortable questions */
+    .drag-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      flex: 0 0 auto;
+      cursor: grab;
+      color: #9aa0ab;
+      font-size: 1.1rem;
+      background: #fbfbfa;
+      border: 1px solid var(--line);
+      border-right: none;
+      user-select: none;
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+
+    .q-item .accordion-header {
+      align-items: stretch;
+    }
+
+    .q-item.sortable-ghost {
+      opacity: .4;
+    }
+
+    .q-item.sortable-chosen .drag-handle {
+      background: var(--hover);
+    }
+
+    /* Requirement #1: small rename (pencil) button on Subject/Topic/Level headers */
+    .tree-edit-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      flex: 0 0 auto;
+      cursor: pointer;
+      color: #6c757d;
+      font-size: .95rem;
+      background: #fbfbfa;
+      border: 1px solid var(--line);
+      border-left: none;
+    }
+
+    .tree-edit-btn:hover {
+      background: var(--hover);
+      color: var(--accent);
+    }
+
+    /* drag-to-reorder for the Subject / Topic / Level tree accordions themselves */
+    .tree-item>.accordion-header {
+      display: flex;
+      align-items: stretch;
+    }
+
+    .tree-item>.accordion-header .accordion-button {
+      width: auto;
+      flex: 1 1 auto;
+    }
+
+    .tree-item.sortable-ghost {
+      opacity: .4;
+    }
+
+    .tree-item.sortable-chosen>.accordion-header .drag-handle {
+      background: var(--hover);
+    }
+
+    .less-important-icon {
+      margin-left: .4rem;
+    }
+
+    .star-icon {
+      margin-left: .4rem;
+      color: #d9a441;
+    }
+
+    .app-header .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .timer-widget {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: .5rem;
+      padding: .5rem .75rem;
+    }
+
+    .timer-display {
+      font-family: 'Consolas', monospace;
+      font-size: 1.25rem;
+      font-weight: 700;
+      min-width: 5.5ch;
+      text-align: center;
+    }
+
+    .add-question-wrap {
+      border-bottom: 1px dashed var(--line);
+      margin-bottom: .6rem;
+    }
+
+    .add-question-panel {
+      background: #fbfbfa;
+      border: 1px solid var(--line);
+      border-radius: .4rem;
+      padding: .75rem;
+      margin-bottom: .5rem;
+    }
+
+    .star-toggle-btn {
+      background: none;
+      border: none;
+      font-size: 1.1rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 .25rem;
+    }
+
+    /* Requirement #2: fixed floating toggles, bottom-right, each an icon + checkbox styled
+       like "Show Starred Only" — Edit Icon shows/hides editing affordances (drag handles,
+       edit question/answer + move controls, add-new panels); Focus Mode hides the
+       toolbar/filter/add-new cards for a distraction-free view. Icon-only: the real checkbox
+       is visually hidden (but still keyboard/click accessible via the wrapping label), and
+       the circle's background color is what communicates on/off. */
+    .floating-toggles {
+      position: fixed;
+      right: 1.5rem;
+      bottom: 1.5rem;
+      z-index: 1050;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: .7rem;
+    }
+
+    .floating-toggle-item {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 3.2rem;
+      height: 3.2rem;
+      border-radius: 50%;
+      background: #9aa0ab;
+      color: #fff;
+      font-size: 1.3rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
+      cursor: pointer;
+      user-select: none;
+      transition: background-color .15s ease;
+    }
+
+    .floating-toggle-item:has(input:checked) {
+      background: var(--accent);
+    }
+
+    .global-alert-holder {
+      position: fixed;
+      top: 6.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2000;
+      width: min(90vw, 480px);
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+
+    .tree-copy-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      flex: 0 0 auto;
+      cursor: pointer;
+      color: #6c757d;
+      font-size: .95rem;
+      background: #fbfbfa;
+      border: 1px solid var(--line);
+      border-left: none;
+    }
+
+    .tree-copy-btn:hover {
+      background: var(--hover);
+      color: var(--accent);
+    }
+
+    .level-alert-holder .alert {
+      font-size: .9rem;
+      padding: .55rem .9rem;
+    }
+
+    .level-alert-holder .alert-link {
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    /* Fuzzy-duplicate suggestions: collapsible Subject > Topic > Level groups, one question
+       per row, capped at 10 questions total (see findFuzzyMatches). */
+    .fuzzy-hint-label {
+      font-weight: 600;
+      margin-bottom: .25rem;
+    }
+
+    .fuzzy-hint-group {
+      margin-bottom: .2rem;
+    }
+
+    .fuzzy-hint-group-header {
+      display: block;
+      cursor: pointer;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .fuzzy-hint-group-header:hover {
+      text-decoration: underline;
+    }
+
+    .fuzzy-hint-group-header::before {
+      content: "▸ ";
+      display: inline-block;
+      transition: transform .12s ease;
+    }
+
+    .fuzzy-hint-group-header.is-open::before {
+      content: "▾ ";
+    }
+
+    .fuzzy-hint-group-list {
+      padding-left: 1.1rem;
+      border-left: 2px solid var(--line);
+      margin: .15rem 0 .3rem;
+    }
+
+    .fuzzy-hint-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .4rem;
+      padding: .1rem 0;
+    }
+
+    .fuzzy-hint-row .alert-link {
+      cursor: pointer;
+      text-decoration: underline;
+      flex: 1 1 auto;
+    }
+
+    /* Requirement: icon-only "Add Question After" link — creates and auto-saves a new question
+       directly after this matched one, in its own Level. */
+    .fuzzy-hint-add-after {
+      flex: 0 0 auto;
+      color: #6c757d;
+      cursor: pointer;
+      font-size: .9rem;
+      padding: 0 .2rem;
+    }
+
+    .fuzzy-hint-add-after:hover {
+      color: var(--accent);
+    }
+
+    /* Requirement: flag exact-text fuzzy matches (real duplicates, not just related questions)
+       with a yellow highlight so they stand out from the merely-similar ones. */
+    .fuzzy-hint-row.exact-match .alert-link {
+      background: var(--flash);
+      padding: .05rem .3rem;
+      border-radius: .2rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    /* Requirement: flash-highlight must span the ENTIRE accordion header (not just the button),
+       so it needs to sit on top of every header child — drag handle, icon rows, edit/copy
+       buttons — each of which paints its own opaque background. A positioned overlay covering
+       the whole header, above everything, is the only way to guarantee that regardless of which
+       children happen to be present on a given header. */
+    .accordion-header {
+      position: relative;
+    }
+
+    .flash-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--flash);
+      opacity: .7;
+      pointer-events: none;
+      z-index: 3;
+      transition: opacity 9.5s ease-out;
+    }
+
+    .flash-overlay.fade {
+      opacity: 0;
+    }
+
+    /* Action icons shown over a flash-highlighted header — a dismiss (x) is always present; the
+       jump-back/add-anyway icons join it depending on what triggered the flash. All fade out
+       together with the flash overlay. Default: a normal in-flow flex child (inserted right
+       before the status-cluster/delete icons in flashHighlightItem), positioned only enough to
+       paint above the flash-overlay tint — NOT overlapping any other header content. */
+    .flash-action-icons {
+      position: relative;
+      display: flex;
+      align-items: center;
+      align-self: center;
+      gap: .35rem;
+      margin: 0 .4rem;
+      z-index: 4;
+      opacity: 1;
+      transition: opacity 9.5s ease-out;
+    }
+
+    .flash-action-icons.fade {
+      opacity: 0;
+    }
+
+    /* Fallback for headers with no status-cluster to insert before (tree headers, or a plain
+       surface like the add-question-wrap) — overlays the right edge instead. */
+    .flash-action-icons.flash-action-icons-overlay {
+      position: absolute;
+      top: 50%;
+      right: .5rem;
+      transform: translateY(-50%);
+      margin: 0;
+    }
+
+    .flash-action-icon-btn {
+      border: none;
+      width: 1.9rem;
+      height: 1.9rem;
+      border-radius: 50%;
+      background: #fff;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, .3);
+      font-size: .8rem;
+    }
+
+    .flash-action-icon-btn:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .flash-action-icon-btn.flash-dismiss-btn {
+      color: #6c757d;
+    }
+
+    .flash-action-icon-btn.flash-dismiss-btn:hover {
+      background: #dc3545;
+      color: #fff;
+    }
+
+    /* Requirement: index numbers on question accordions, hidden while Edit Mode is on
+       (dragging/editing) and re-shown once it's off, always reflecting the latest order. */
+    .q-index {
+      margin-right: .5rem;
+      font-weight: 700;
+      color: #8a8f99;
+    }
+
+    body:not(.edit-mode-off) .q-index {
+      display: none;
+    }
+
+
+    .global-stats-badges {
+      margin-bottom: .75rem;
+    }
+
+    .global-stats-badges .badge {
+      font-size: .85rem;
+      padding: .5em .75em;
+    }
+
+    .global-stats-badges .stat-badge-clickable {
+      cursor: pointer;
+      transition: filter .12s ease;
+    }
+
+    .global-stats-badges .stat-badge-clickable:hover {
+      filter: brightness(1.12);
+    }
+
+    .floating-toggle-item .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    body.edit-mode-off .drag-handle,
+    body.edit-mode-off .status-controls,
+    body.edit-mode-off #addNewCard,
+    body.edit-mode-off .quick-add-row,
+    body.edit-mode-off .tree-edit-btn,
+    body.edit-mode-off #manageMetadataToggleLink,
+    body.edit-mode-off #manageMetadataCard {
+      display: none !important;
+    }
+
+    body.focus-mode #controlsWrapper,
+    body.focus-mode #addNewCard,
+    body.focus-mode #toggleCardsLink,
+    body.focus-mode .add-question-wrap,
+    body.focus-mode .editModeToggle,
+    body.focus-mode #manageMetadataToggleLink,
+    body.focus-mode #manageMetadataCard {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app-header">
+    <div class="container">
+      <div>
+        <h1>Interview Question Viewer</h1>
+        <p class="header-breadcrumb" id="headerBreadcrumb"></p>
+      </div>
+      <div class="timer-widget">
+        <span class="timer-display" id="timerDisplay">00:00:00</span>
+        <button type="button" class="btn btn-outline-success" id="timerStartBtn">Start</button>
+        <button type="button" class="btn btn-outline-warning" id="timerPauseBtn">Pause</button>
+        <button type="button" class="btn btn-outline-secondary" id="timerResetBtn">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container pb-5">
+
+    <div class="d-flex justify-content-end mb-2">
+      <a href="#" id="toggleCardsLink" class="small text-decoration-none">Hide Controls ▲</a>
+    </div>
+
+    <div id="controlsWrapper">
+      <div class="toolbar-card p-3 mb-3">
+        <div class="row g-2 align-items-center">
+          <div class="col-auto">
+            <label class="btn btn-primary mb-0">
+              <i class="fa-solid fa-upload"></i> CSV
+              <input type="file" id="csvInput" accept=".csv" hidden>
+            </label>
+          </div>
+          <div class="col-auto">
+            <div class="form-check form-switch mt-2">
+              <input class="form-check-input" type="checkbox" id="tempModeToggle">
+            </div>
+          </div>
+          <div class="col-auto">
+            <button id="loadCsvStringBtn" class="btn btn-outline-primary" title="Loads data.js's csvString if present, otherwise a built-in sample question set"><i class="fa-solid fa-circle-play"></i> Load Sample</button>
+          </div>
+
+          <div class="col-auto">
+            <button id="downloadProgressBtn" class="btn btn-outline-success" disabled><i class="fa-solid fa-download"></i> Export</button>
+          </div>
+          <div class="col-auto">
+            <select id="csvSwitcher" class="form-select" style="min-width:180px;" disabled>
+              <option value="">No CSV loaded</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <button id="resetAllBtn" class="btn btn-outline-danger" disabled><i class="fa-regular fa-circle-xmark"></i> Reset All</button>
+          </div>
+          <div class="col-auto ms-auto" style="display: none;">
+            <span id="statusMsg" class="text-muted small"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-card p-3 mb-3" id="filterCard" style="display:none;">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">Subject</label>
+            <select id="subjectFilter" class="form-control" multiple></select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">Topic</label>
+            <select id="topicFilter" class="form-control" multiple></select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">Level</label>
+            <select id="levelFilter" class="form-control" multiple></select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">Status</label>
+            <select id="statusFilter" class="form-control" multiple>
+              <option value="Done">Done</option>
+              <option value="ReviewLater">Review Later</option>
+              <option value="LessImportant">Less Important</option>
+              <option value="Starred">Starred</option>
+            </select>
+          </div>
+        </div>
+        <div class="mt-2 d-flex justify-content-between align-items-center">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="starredOnlyToggle">
+            <label class="form-check-label small fw-bold" for="starredOnlyToggle">⭐ Starred</label>
+            <span id="starredCountBadge" class="badge bg-secondary ms-2" style="display:none;"></span>
+          </div>
+          <button id="clearFiltersBtn" class="btn btn-sm btn-outline-secondary">Clear Filters</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-card p-3 mb-3" id="addNewCard" style="display:none;">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <strong>Add New Subject / Topic / Level</strong>
+          <span class="text-muted small ms-2">Create a brand-new Subject, Topic, or Level (with its first question) — or
+            add another question to an existing one.</span>
+        </div>
+        <button type="button" id="addNewToggleBtn" class="btn btn-sm btn-primary">+ Add New</button>
+      </div>
+      <div id="addNewPanel" class="mt-3" style="display:none;"></div>
+    </div>
+
+    <div class="d-flex justify-content-end mb-2">
+      <a href="#" id="manageMetadataToggleLink" class="small text-decoration-none">Manage Subjects / Topics / Levels ▾</a>
+    </div>
+
+    <div class="filter-card p-3 mb-3" id="manageMetadataCard" style="display:none;">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <strong>Manage Subjects / Topics / Levels</strong>
+        <span class="text-muted small">Rename any entry onto an existing sibling's name to merge duplicates
+          (e.g. "corejava" + "core java" → "Core Java").</span>
+      </div>
+      <div id="manageMetadataBody"></div>
+    </div>
+
+    <div id="globalStatsBadges" class="global-stats-badges"></div>
+
+    <div class="mb-3" id="questionSearchWrap" style="display:none;">
+      <label class="form-label small fw-bold" for="questionSearchInput">Jump to Question</label>
+      <div class="input-group">
+        <input type="text" id="questionSearchInput" class="form-control"
+          placeholder="Search questions by subject / topic / level / text...">
+        <button type="button" id="questionSearchClearBtn" class="btn btn-outline-secondary" title="Clear search">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="questionSearchResults" class="mt-2"></div>
+    </div>
+
+    <div id="rootAccordion"></div>
+
+  </div>
+
+  <div id="globalAlertHolder" class="global-alert-holder"></div>
+
+  <div class="floating-toggles">
+    <button type="button" id="closeAllAccordionsBtn" class="floating-toggle-item" title="Close all open accordions">
+      <span aria-hidden="true">✕</span>
+    </button>
+    <label class="floating-toggle-item editModeToggle" title="Show/hide edit controls (drag, edit, add, move)">
+      <input type="checkbox" id="editModeToggle" class="visually-hidden">
+      <span aria-hidden="true">✎</span>
+    </label>
+    <label class="floating-toggle-item" title="Focus Mode: hide the toolbar/filter/add-new cards">
+      <input type="checkbox" id="focusModeToggle" class="visually-hidden">
+      <span aria-hidden="true">🎯</span>
+    </label>
+  </div>
+
+  <script>
+    /* ============ State ============ */
+    let rawData = [];      // array of row objects as parsed from CSV
+    let grouped = {};       // Subject -> Topic -> Level -> [questions]
+    let activeFilters = { Subject: [], Topic: [], Level: [], Status: [] };
+    let showStarredOnly = false;
+    let timerSeconds = 0;
+    let timerInterval = null;
+    let timerShouldPersist = false; // true from Start until Reset; controls whether we write to storage
+    let currentFileName = null;
+    let tempMode = true;
+    let expandDirection = "first"; // "first" normally, "last" when tempMode is on
+    let scrollTargetEl = null;
+    let pendingFocusQid = null; // set before render() to auto-expand + scroll to a specific question's accordion chain
+    let editModeOn = false; // mirrors editModeToggle; while true, render() skips first/last auto-expand
+    let searchableQuestions = []; // the current filtered question list, for the live search box
+
+    const LS_TEMP_MODE = "iqv_temp_mode";
+    const LS_TIMER = "iqv_timer_seconds";
+    const LS_CARDS_HIDDEN = "iqv_cards_hidden";
+    const LS_EDIT_MODE_ON = "iqv_edit_mode_on";
+    const LS_FOCUS_MODE_ON = "iqv_focus_mode_on";
+    let badgeRefs = {}; // key -> { holder: <span>, node: topics|levels|questions[] } for live badge sync
+
+    const REQUIRED_COLUMNS = ["Subject", "Topic", "Level", "Question", "Answer", "Done", "ReviewLater"];
+    const LS_FILE_LIST = "iqv_files";
+    const LS_ACTIVE_FILE = "iqv_active";
+    const LS_DATA_PREFIX = "iqv_data_";
+    const LS_FILTER_PREFIX = "iqv_filters_";
+
+    /* ============ localStorage layer ============ */
+    function getFileList() {
+      try {
+        return JSON.parse(localStorage.getItem(LS_FILE_LIST)) || [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveFileList(list) {
+      localStorage.setItem(LS_FILE_LIST, JSON.stringify(list));
+    }
+
+    function getActiveFileName() {
+      return localStorage.getItem(LS_ACTIVE_FILE);
+    }
+
+    function setActiveFileName(name) {
+      localStorage.setItem(LS_ACTIVE_FILE, name);
+    }
+
+    function saveFileData(filename, rows) {
+      const slim = rows.map(r => ({
+        Subject: r.Subject, Topic: r.Topic, Level: r.Level,
+        Question: r.Question, Answer: r.Answer, Done: r.Done, ReviewLater: r.ReviewLater,
+        Duplicate: !!r.Duplicate, LessImportant: !!r.LessImportant, Starred: !!r.Starred, Order: r.Order,
+        SubjectOrder: r.SubjectOrder, TopicOrder: r.TopicOrder, LevelOrder: r.LevelOrder
+      }));
+      localStorage.setItem(LS_DATA_PREFIX + filename, JSON.stringify(slim));
+    }
+
+    function readFileData(filename) {
+      try {
+        const raw = JSON.parse(localStorage.getItem(LS_DATA_PREFIX + filename));
+        if (!Array.isArray(raw)) return null;
+        return raw.map(r => ({ ...r, _id: uid("q") }));
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function persistCurrentProgress() {
+      if (tempMode || !currentFileName) return;
+      saveFileData(currentFileName, rawData);
+    }
+
+    function clearAllStorage() {
+      const list = getFileList();
+      list.forEach(name => {
+        localStorage.removeItem(LS_DATA_PREFIX + name);
+        localStorage.removeItem(LS_FILTER_PREFIX + name);
+      });
+      localStorage.removeItem(LS_FILE_LIST);
+      localStorage.removeItem(LS_ACTIVE_FILE);
+    }
+
+    /* Requirement: remember the active filter selections (Subject/Topic/Level/Status) and the
+       Starred-only toggle per CSV, so reopening the same file in a future session re-applies
+       them automatically. Skipped in temp mode, same as progress persistence. */
+    function saveFilterPrefs() {
+      if (tempMode || !currentFileName) return;
+      localStorage.setItem(LS_FILTER_PREFIX + currentFileName, JSON.stringify({
+        Subject: activeFilters.Subject, Topic: activeFilters.Topic,
+        Level: activeFilters.Level, Status: activeFilters.Status,
+        starredOnly: showStarredOnly
+      }));
+    }
+
+    function loadFilterPrefs(filename) {
+      if (!filename) return null;
+      try {
+        return JSON.parse(localStorage.getItem(LS_FILTER_PREFIX + filename));
+      } catch (e) {
+        return null;
+      }
+    }
+
+    /* ============ Utility ============ */
+    function uid(prefix) {
+      return prefix + "-" + Math.random().toString(36).slice(2, 10);
+    }
+
+    function toBool(val) {
+      if (typeof val === "boolean") return val;
+      if (val === undefined || val === null) return false;
+      return String(val).trim().toLowerCase() === "true" || String(val).trim() === "1";
+    }
+
+    function setStatusMsg(text, isError) {
+      const el = document.getElementById("statusMsg");
+      el.textContent = text;
+      el.style.color = isError ? "#c0392b" : "#6c757d";
+    }
+
+    // --- Event Listeners ---
+    // (csvInput's change listener is registered once, in the Event wiring block near the bottom.)
+
+    // "Load CSV" button: loads data.js's csvString if it's defined and non-empty,
+    // otherwise falls back to loading the built-in default sample question set.
+    document.getElementById("loadCsvStringBtn").addEventListener("click", () => {
+      const hasDataJs = typeof csvString !== "undefined" && csvString && String(csvString).trim();
+      if (hasDataJs) {
+        loadCSVFromString(csvString, "Data_JS_Import.csv");
+      } else {
+        loadCSVFromString(getDefaultSampleCSV(), "sample_interview_questions.csv");
+      }
+    });
+
+    // --- Parsing Entry Points ---
+
+    // Original File Loader
+    function loadCSV(file) {
+      const filename = file.name;
+      if (!checkDuplicateFile(filename)) return;
+
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function (results) {
+          processParsedResults(results, filename);
+          document.getElementById("csvInput").value = ""; // Clear file input on success
+        },
+        error: function (err) {
+          setStatusMsg("Failed to parse CSV file: " + err.message, true);
+        }
+      });
+    }
+
+    // New String Loader
+    function loadCSVFromString(stringData, filename) {
+      if (!checkDuplicateFile(filename)) return;
+
+      Papa.parse(stringData, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function (results) {
+          processParsedResults(results, filename);
+        },
+        error: function (err) {
+          setStatusMsg("Failed to parse CSV string: " + err.message, true);
+        }
+      });
+    }
+
+    // --- Shared Helper Functions ---
+
+    // Checks if file already exists
+    function checkDuplicateFile(filename) {
+      if (!tempMode) {
+        const existingList = getFileList();
+        if (existingList.includes(filename)) {
+          alert(`A CSV named "${filename}" is already loaded. Rename the file, switch to it from the dropdown, or Reset All Data first.`);
+          if (document.getElementById("csvInput")) document.getElementById("csvInput").value = "";
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // Shared processing, validation, and storage logic
+    function processParsedResults(results, filename) {
+      const rows = results.data;
+
+      if (!results.meta.fields) {
+        setStatusMsg("Invalid CSV format structure.", true);
+        return;
+      }
+
+      const missing = REQUIRED_COLUMNS.filter(c => !results.meta.fields.includes(c));
+      if (missing.length) {
+        setStatusMsg("Missing columns: " + missing.join(", "), true);
+        return;
+      }
+
+      const subjectOrderMap = new Map();          // subject -> order
+      const topicOrderMap = new Map();             // "subject|topic" -> order
+      const topicCounters = new Map();              // subject -> next topic order
+      const levelOrderMap = new Map();              // "subject|topic|level" -> order
+      const levelCounters = new Map();               // "subject|topic" -> next level order
+      const numOr = (val, fallback) => (val !== undefined && val !== "" && !isNaN(Number(val))) ? Number(val) : fallback;
+
+      const parsedRows = rows.map((r, i) => {
+        const subject = (r.Subject || "").trim();
+        const topic = (r.Topic || "").trim();
+        const level = (r.Level || "").trim();
+
+        if (!subjectOrderMap.has(subject)) subjectOrderMap.set(subject, subjectOrderMap.size);
+
+        const topicKey = subject + "|" + topic;
+        if (!topicOrderMap.has(topicKey)) {
+          const c = topicCounters.get(subject) || 0;
+          topicOrderMap.set(topicKey, c);
+          topicCounters.set(subject, c + 1);
+        }
+
+        const levelKey = topicKey + "|" + level;
+        if (!levelOrderMap.has(levelKey)) {
+          const c = levelCounters.get(topicKey) || 0;
+          levelOrderMap.set(levelKey, c);
+          levelCounters.set(topicKey, c + 1);
+        }
+
+        return {
+          Subject: subject,
+          Topic: topic,
+          Level: level,
+          Question: (r.Question || "").trim(),
+          Answer: r.Answer || "",
+          Done: toBool(r.Done),
+          ReviewLater: toBool(r.ReviewLater),
+          Duplicate: toBool(r.Duplicate),
+          LessImportant: toBool(r.LessImportant),
+          Starred: toBool(r.Starred),
+          Order: numOr(r.Order, i),
+          SubjectOrder: numOr(r.SubjectOrder, subjectOrderMap.get(subject)),
+          TopicOrder: numOr(r.TopicOrder, topicOrderMap.get(topicKey)),
+          LevelOrder: numOr(r.LevelOrder, levelOrderMap.get(levelKey)),
+          _id: uid("q")
+        };
+      }).filter(r => r.Subject && r.Topic && r.Level && r.Question);
+
+      if (!parsedRows.length) {
+        setStatusMsg("No valid rows found in CSV.", true);
+        return;
+      }
+
+      if (tempMode) {
+        activateFile(filename, parsedRows);
+        setStatusMsg(parsedRows.length + " - from \"" + filename + "\" (test mode — not saved).");
+        return;
+      }
+
+      const list = getFileList();
+      list.push(filename);
+      saveFileList(list);
+      saveFileData(filename, parsedRows);
+      setActiveFileName(filename);
+
+      activateFile(filename, parsedRows);
+      setStatusMsg(parsedRows.length + " - from \"" + filename + "\".");
+    }
+
+
+    /* Activates a given filename's data as the current working set and refreshes UI. */
+    function activateFile(filename, rows) {
+      currentFileName = filename;
+      rawData = rows;
+      grouped = groupData(rawData);
+      populateFilterOptions();
+      populateFileSwitcher();
+      document.getElementById("filterCard").style.display = "block";
+      document.getElementById("addNewCard").style.display = "block";
+      document.getElementById("downloadProgressBtn").disabled = false;
+      document.getElementById("resetAllBtn").disabled = false;
+      render();
+    }
+
+    function switchCSV(filename) {
+      if (!filename || filename === currentFileName) return;
+      const rows = readFileData(filename);
+      if (!rows) {
+        setStatusMsg("Could not load \"" + filename + "\" from storage.", true);
+        return;
+      }
+      setActiveFileName(filename);
+      activateFile(filename, rows);
+      setStatusMsg(rows.length + " - from \"" + filename + "\".");
+    }
+
+    function populateFileSwitcher() {
+      const select = document.getElementById("csvSwitcher");
+      select.textContent = "";
+      const list = getFileList();
+
+      if (!list.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No CSV loaded";
+        select.appendChild(opt);
+        select.disabled = true;
+        return;
+      }
+
+      list.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        if (name === currentFileName) opt.selected = true;
+        select.appendChild(opt);
+      });
+      select.disabled = false;
+    }
+
+    function resetAllData() {
+      const confirmed = confirm("This permanently deletes all uploaded CSVs and progress from this browser. This cannot be undone. Continue?");
+      if (!confirmed) return;
+
+      clearAllStorage();
+      rawData = [];
+      grouped = {};
+      currentFileName = null;
+      activeFilters = { Subject: [], Topic: [], Level: [], Status: [] };
+      showStarredOnly = false;
+      document.getElementById("starredOnlyToggle").checked = false;
+
+      document.getElementById("filterCard").style.display = "none";
+      document.getElementById("addNewCard").style.display = "none";
+      document.getElementById("addNewPanel").style.display = "none";
+      document.getElementById("downloadProgressBtn").disabled = true;
+      document.getElementById("resetAllBtn").disabled = true;
+      populateFileSwitcher();
+      setStatusMsg("All data reset.");
+      render();
+    }
+
+    function initApp() {
+      const storedTemp = localStorage.getItem(LS_TEMP_MODE);
+      tempMode = storedTemp === null ? true : storedTemp === "true";
+      document.getElementById("tempModeToggle").checked = tempMode;
+
+      const list = getFileList();
+      const active = getActiveFileName();
+      populateFileSwitcher();
+      if (list.length) {
+        document.getElementById("resetAllBtn").disabled = false;
+      }
+      if (active && list.includes(active)) {
+        const rows = readFileData(active);
+        if (rows && rows.length) {
+          activateFile(active, rows);
+          setStatusMsg(rows.length + " - from \"" + active + "\" .");
+          return;
+        }
+      }
+      render();
+    }
+
+    /* Built-in default sample question set — used by the "Load CSV" button as a fallback
+       whenever data.js doesn't provide a non-empty csvString. */
+    function getDefaultSampleCSV() {
+      const sample = [
+        ["Subject", "Topic", "Level", "Question", "Answer", "Done", "ReviewLater", "Duplicate", "LessImportant"],
+        ["Java", "Collections", "Easy", "What is the difference between ArrayList and LinkedList?", "<p><b>ArrayList</b> uses a dynamic array; <b>LinkedList</b> uses a doubly linked list. ArrayList has faster random access, LinkedList has faster insert/delete at ends.</p>", "false", "false", "false", "false"],
+        ["Java", "Collections", "Medium", "How does HashMap handle collisions?", "<p>HashMap uses <i>chaining</i> (linked list / red-black tree in Java 8+) within each bucket to handle collisions.</p>", "false", "false", "false", "false"],
+        ["Java", "Multithreading", "Hard", "Explain the Java Memory Model and happens-before relationship.", "<p>The JMM defines rules for visibility and ordering of variable writes/reads across threads, formalized via the <b>happens-before</b> relationship.</p>", "false", "true", "false", "false"],
+        ["SQL", "Joins", "Easy", "What is the difference between INNER JOIN and LEFT JOIN?", "<p>INNER JOIN returns matching rows only; LEFT JOIN returns all rows from the left table plus matches from the right.</p>", "true", "false", "false", "false"],
+        ["SQL", "Indexing", "Medium", "When should you avoid adding an index?", "<ul><li>Small tables</li><li>Columns with low cardinality</li><li>Tables with heavy write load</li></ul>", "false", "false", "false", "true"]
+      ];
+      return Papa.unparse(sample);
+    }
+
+    function formatTimestamp(d) {
+      const pad = n => String(n).padStart(2, "0");
+      return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + "_" +
+        pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+    }
+
+    function downloadProgress() {
+      if (!rawData.length) return;
+
+      const exportRows = rawData
+        .filter(r => !r.Duplicate) // duplicates are dropped from the exported progress file
+        .map(r => ({
+          Subject: r.Subject,
+          Topic: r.Topic,
+          Level: r.Level,
+          Question: r.Question,
+          Answer: r.Answer,
+          Done: r.Done,
+          ReviewLater: r.ReviewLater,
+          LessImportant: !!r.LessImportant,
+          Starred: !!r.Starred,
+          Order: r.Order,
+          SubjectOrder: r.SubjectOrder,
+          TopicOrder: r.TopicOrder,
+          LevelOrder: r.LevelOrder
+        }));
+
+      const csv = Papa.unparse(exportRows);
+
+      // 1. Get current date formatted as MMMDD (e.g., "Jul30")
+      const now = new Date();
+      const month = now.toLocaleString("en-US", { month: "short" });
+      const day = String(now.getDate()).padStart(2, "0");
+      const dateStr = `${month}${day}`;
+
+      // 2. Strip off the .csv extension
+      let base = (currentFileName || "interview_questions").replace(/\.csv$/i, "");
+
+      // 3. Match any existing _<Month><Day>_v<number> suffix (e.g., _Jul30_v001)
+      const pattern = new RegExp(`_${dateStr}_v(\\d+)$`, "i");
+      const match = base.match(pattern);
+
+      let version = 1;
+      if (match) {
+        version = parseInt(match[1], 10) + 1;
+        // Strip the old timestamp tag (and also clean any older _progress_ tags if present)
+        base = base.replace(pattern, "");
+      } else {
+        // If updating on a new day, strip previous date pattern to prevent stacking (e.g., _Jul29_v003)
+        base = base.replace(/_[A-Za-z]{3}\d{2}_v\d+$/i, "").replace(/_progress_v\d+$/i, "");
+      }
+
+      // 4. Pad version number to 3 digits (e.g., 1 -> "001")
+      const paddedVersion = String(version).padStart(3, "0");
+
+      triggerDownload(csv, `${base}_${dateStr}_v${paddedVersion}.csv`);
+    }
+
+    function triggerDownload(csvText, filename) {
+      const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    /* ============ Grouping ============ */
+    /* Builds Subject -> Topic -> Level -> [questions], with keys inserted in SubjectOrder /
+       TopicOrder / LevelOrder sequence (JS objects preserve string-key insertion order), so the
+       tree renders in whatever order was last dragged, not just CSV appearance order. */
+    function groupData(rows) {
+      const bucket = {};
+      rows.forEach(row => {
+        if (!bucket[row.Subject]) bucket[row.Subject] = { order: row.SubjectOrder ?? 0, topics: {} };
+        if (row.SubjectOrder !== undefined) bucket[row.Subject].order = row.SubjectOrder;
+
+        const topics = bucket[row.Subject].topics;
+        if (!topics[row.Topic]) topics[row.Topic] = { order: row.TopicOrder ?? 0, levels: {} };
+        if (row.TopicOrder !== undefined) topics[row.Topic].order = row.TopicOrder;
+
+        const levels = topics[row.Topic].levels;
+        if (!levels[row.Level]) levels[row.Level] = { order: row.LevelOrder ?? 0, questions: [] };
+        if (row.LevelOrder !== undefined) levels[row.Level].order = row.LevelOrder;
+
+        levels[row.Level].questions.push(row);
+      });
+
+      const result = {};
+      Object.keys(bucket)
+        .sort((a, b) => bucket[a].order - bucket[b].order)
+        .forEach(subject => {
+          result[subject] = {};
+          const topics = bucket[subject].topics;
+          Object.keys(topics)
+            .sort((a, b) => topics[a].order - topics[b].order)
+            .forEach(topic => {
+              const levels = topics[topic].levels;
+              result[subject][topic] = {};
+              Object.keys(levels)
+                .sort((a, b) => levels[a].order - levels[b].order)
+                .forEach(level => {
+                  const questions = levels[level].questions;
+                  // Requirement: Starred questions always float to the top of their Level; ties
+                  // (both starred or both not) fall back to the persisted drag order. Since this
+                  // sort re-runs every time grouped is rebuilt (load, reload, CSV import), the
+                  // starred-first arrangement survives a reload without needing to rewrite Order.
+                  questions.sort((a, b) => {
+                    const starDiff = (b.Starred ? 1 : 0) - (a.Starred ? 1 : 0);
+                    if (starDiff) return starDiff;
+                    return (a.Order ?? 0) - (b.Order ?? 0);
+                  });
+                  result[subject][topic][level] = questions;
+                });
+            });
+        });
+      return result;
+    }
+
+    /* Returns grouped data pruned down to only Subject/Topic/Level combos that pass activeFilters.
+       Less Important questions are always included in the list, filters, and counts — the only way
+       a question is excluded here is the same Status filter that also applies to Done/Review Later. */
+    function filterGroupedData() {
+      const result = {};
+      Object.keys(grouped).forEach(subject => {
+        const topics = grouped[subject];
+        const filteredTopics = {};
+        Object.keys(topics).forEach(topic => {
+          const levels = topics[topic];
+          const filteredLevels = {};
+          Object.keys(levels).forEach(level => {
+            if (!passesFilter(subject, topic, level)) return;
+            const visible = activeFilters.Status.length
+              ? levels[level].filter(q => matchesStatusFilter(q))
+              : levels[level];
+            if (visible.length) filteredLevels[level] = visible;
+          });
+          if (Object.keys(filteredLevels).length) filteredTopics[topic] = filteredLevels;
+        });
+        if (Object.keys(filteredTopics).length) result[subject] = filteredTopics;
+      });
+      return result;
+    }
+
+    /* Flattens a Subject-node (topics obj), Topic-node (levels obj), or Level-node (questions array) into a flat question list. */
+    function flattenQuestions(node) {
+      if (Array.isArray(node)) return node;
+      let all = [];
+      Object.values(node).forEach(child => { all = all.concat(flattenQuestions(child)); });
+      return all;
+    }
+
+    /* The Subject -> Topic -> Level -> [questions] tree that's actually on screen right now:
+       the Status/Subject/Topic/Level filtered tree normally, or — since the Starred-only view
+       bypasses that filtered tree entirely for a flat list — a tree regrouped from just the
+       starred questions, so hierarchy-copy still makes sense in that view too. */
+    function getVisibleGroupedTree() {
+      return showStarredOnly ? groupData(rawData.filter(q => q.Starred)) : filterGroupedData();
+    }
+
+    /* Requirement: copy every currently-visible question as a plain one-per-line list. */
+    function copyVisibleQuestionsPlain() {
+      const qs = flattenQuestions(getVisibleGroupedTree());
+      if (!qs.length) { alert("No visible questions to copy."); return; }
+      const text = qs.map(q => q.Question).join("\n");
+      navigator.clipboard.writeText(text).then(() => {
+        showSuccessAlert(qs.length + " visible question(s) copied to clipboard.");
+      }).catch(() => {
+        alert("Copy failed — clipboard access may be blocked by the browser.");
+      });
+    }
+
+    /* Requirement: copy the currently-visible tree as tab-indented hierarchy — Subject (no
+       indent), Topic (1 tab), Level (2 tabs), Question (3 tabs). */
+    function copyVisibleQuestionsHierarchy() {
+      const tree = getVisibleGroupedTree();
+      const subjects = Object.keys(tree);
+      if (!subjects.length) { alert("No visible questions to copy."); return; }
+
+      const lines = [];
+      let count = 0;
+      subjects.forEach(subject => {
+        lines.push(subject);
+        Object.keys(tree[subject]).forEach(topic => {
+          lines.push("\t" + topic);
+          Object.keys(tree[subject][topic]).forEach(level => {
+            lines.push("\t\t" + level);
+            tree[subject][topic][level].forEach(q => {
+              lines.push("\t\t\t" + q.Question);
+              count++;
+            });
+          });
+        });
+      });
+
+      if (!count) { alert("No visible questions to copy."); return; }
+      navigator.clipboard.writeText(lines.join("\n")).then(() => {
+        showSuccessAlert(count + " visible question(s) copied (hierarchy) to clipboard.");
+      }).catch(() => {
+        alert("Copy failed — clipboard access may be blocked by the browser.");
+      });
+    }
+
+    function computeStats(questions) {
+      return {
+        total: questions.length,
+        done: questions.filter(q => q.Done).length,
+        review: questions.filter(q => q.ReviewLater).length
+      };
+    }
+
+    /* Rebuilds the Order field for a Subject/Topic/Level leaf after a drag-reorder.
+       newOrderIds is the array of question _id in their new (possibly filtered-subset) order;
+       items not present in newOrderIds (hidden by an active filter) keep their relative position. */
+    function reorderLevelQuestions(subject, topic, level, newOrderIds) {
+      const masterArr = grouped[subject] && grouped[subject][topic] && grouped[subject][topic][level];
+      if (!masterArr) return;
+
+      const idToQ = {};
+      masterArr.forEach(q => { idToQ[q._id] = q; });
+
+      const queue = newOrderIds.slice();
+      const visibleIds = new Set(newOrderIds);
+
+      const newMaster = masterArr.map(q => visibleIds.has(q._id) ? idToQ[queue.shift()] : q);
+
+      newMaster.forEach((q, i) => { q.Order = i; });
+      grouped[subject][topic][level] = newMaster;
+      persistCurrentProgress();
+    }
+
+    /* Returns `ids` with `targetId` removed from wherever it is and reinserted directly after
+       `referenceId` (or appended at the end if referenceId isn't found). Used to slot a
+       newly-saved question in right after the matched question that triggered it. */
+    function idsWithInsertAfter(ids, targetId, referenceId) {
+      const others = ids.filter(id => id !== targetId);
+      const idx = others.indexOf(referenceId);
+      if (idx === -1) return [...others, targetId];
+      return [...others.slice(0, idx + 1), targetId, ...others.slice(idx + 1)];
+    }
+
+    /* Requirement: move a question to the top or bottom within its own Subject/Topic/Level,
+       then re-render, jump to it, and highlight the whole accordion for 30s so the move is obvious. */
+    function moveQuestionToEdge(q, edge) {
+      const arr = grouped[q.Subject] && grouped[q.Subject][q.Topic] && grouped[q.Subject][q.Topic][q.Level];
+      if (!arr) return;
+      const otherIds = arr.map(r => r._id).filter(id => id !== q._id);
+      const newOrderIds = edge === "top" ? [q._id, ...otherIds] : [...otherIds, q._id];
+      reorderLevelQuestions(q.Subject, q.Topic, q.Level, newOrderIds);
+      pendingFocusQid = q._id;
+      render();
+      highlightMovedQuestion(q._id);
+    }
+
+    /* Requirement: move a question one position up or down within its own Subject/Topic/Level
+       (swaps it with its immediate neighbor); no-op if already at that edge. */
+    function moveQuestionByStep(q, direction) {
+      const arr = grouped[q.Subject] && grouped[q.Subject][q.Topic] && grouped[q.Subject][q.Topic][q.Level];
+      if (!arr) return;
+      const ids = arr.map(r => r._id);
+      const idx = ids.indexOf(q._id);
+      if (idx === -1) return;
+      const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= ids.length) return; // already at that edge
+      [ids[idx], ids[swapIdx]] = [ids[swapIdx], ids[idx]];
+      reorderLevelQuestions(q.Subject, q.Topic, q.Level, ids);
+      pendingFocusQid = q._id;
+      render();
+      highlightMovedQuestion(q._id);
+    }
+
+    /* Looks up the freshly-rendered DOM node by qid (needed after Up/Down/Top/Bottom, since
+       those trigger a render() that rebuilds the tree) and flash-highlights it. Wired up to
+       Up/Down/Top/Bottom moves and the Starred toggle's re-sort jump. Drag-and-drop reordering
+       and the question search dropdown call flashHighlightItem directly since they already have
+       the element in hand. See flashHighlightItem for the shared highlight mechanism. */
+    function highlightMovedQuestion(qid) {
+      flashHighlightItem(document.querySelector('[data-qid="' + qid + '"]'));
+    }
+
+    /* Returns the {subjectOrder, topicOrder, levelOrder} a new/moved question should carry:
+       inherits the existing group's order if the Subject/Topic/Level already exists, otherwise
+       appends it at the end (so brand-new nodes land last, not scrambled into position 0). */
+    function getExistingOrder(subject, topic, level) {
+      const subjRow = rawData.find(r => r.Subject === subject);
+      const subjectOrder = subjRow ? subjRow.SubjectOrder : new Set(rawData.map(r => r.Subject)).size;
+
+      const topicRow = rawData.find(r => r.Subject === subject && r.Topic === topic);
+      const topicOrder = topicRow ? topicRow.TopicOrder : new Set(rawData.filter(r => r.Subject === subject).map(r => r.Topic)).size;
+
+      const levelRow = rawData.find(r => r.Subject === subject && r.Topic === topic && r.Level === level);
+      const levelOrder = levelRow ? levelRow.LevelOrder : new Set(rawData.filter(r => r.Subject === subject && r.Topic === topic).map(r => r.Level)).size;
+
+      return { subjectOrder, topicOrder, levelOrder };
+    }
+
+    /* Drag-to-reorder for the Subject / Topic / Level accordions themselves (mirrors
+       reorderLevelQuestions above). newOrderNames is the array of Subject/Topic/Level names in
+       their new DOM order; every row sharing that name gets the same order value written so the
+       whole group moves together and it round-trips through localStorage + the progress CSV. */
+    /* Merges a new (possibly filtered-subset) drag order back into the full sibling list: names
+       not present in newOrderNames (hidden by an active filter) keep their existing relative
+       position, exactly like reorderLevelQuestions does for questions. */
+    function mergeReorder(allNames, newOrderNames) {
+      const visible = new Set(newOrderNames);
+      const queue = newOrderNames.slice();
+      return allNames.map(name => visible.has(name) ? queue.shift() : name);
+    }
+
+    function reorderSubjects(newOrderNames) {
+      const allSubjects = Object.keys(grouped); // already in current sorted order
+      const merged = mergeReorder(allSubjects, newOrderNames);
+      merged.forEach((name, i) => {
+        rawData.forEach(r => { if (r.Subject === name) r.SubjectOrder = i; });
+      });
+      grouped = groupData(rawData);
+      persistCurrentProgress();
+    }
+
+    function reorderTopics(subject, newOrderNames) {
+      const allTopics = grouped[subject] ? Object.keys(grouped[subject]) : newOrderNames;
+      const merged = mergeReorder(allTopics, newOrderNames);
+      merged.forEach((name, i) => {
+        rawData.forEach(r => { if (r.Subject === subject && r.Topic === name) r.TopicOrder = i; });
+      });
+      grouped = groupData(rawData);
+      persistCurrentProgress();
+    }
+
+    function reorderLevels(subject, topic, newOrderNames) {
+      const allLevels = (grouped[subject] && grouped[subject][topic]) ? Object.keys(grouped[subject][topic]) : newOrderNames;
+      const merged = mergeReorder(allLevels, newOrderNames);
+      merged.forEach((name, i) => {
+        rawData.forEach(r => { if (r.Subject === subject && r.Topic === topic && r.Level === name) r.LevelOrder = i; });
+      });
+      grouped = groupData(rawData);
+      persistCurrentProgress();
+    }
+
+    /* Requirement #1: rename a Subject/Topic/Level across every row that shares it. Renaming
+       onto an existing sibling's name simply merges into that sibling (grouping is name-keyed). */
+    function renameSubject(oldName, newName) {
+      rawData.forEach(r => { if (r.Subject === oldName) r.Subject = newName; });
+      grouped = groupData(rawData);
+      persistCurrentProgress();
+      refreshFilterOptions();
+      render();
+    }
+
+    function renameTopic(subject, oldName, newName) {
+      rawData.forEach(r => { if (r.Subject === subject && r.Topic === oldName) r.Topic = newName; });
+      grouped = groupData(rawData);
+      persistCurrentProgress();
+      refreshFilterOptions();
+      render();
+    }
+
+    function renameLevel(subject, topic, oldName, newName) {
+      rawData.forEach(r => { if (r.Subject === subject && r.Topic === topic && r.Level === oldName) r.Level = newName; });
+      grouped = groupData(rawData);
+      persistCurrentProgress();
+      refreshFilterOptions();
+      render();
+    }
+
+    /* Requirement: batch update — the Manage Subjects/Topics/Levels panel's Topic/Level
+       dropdowns are deduped by name alone (not per Subject/Topic parent), so renaming from there
+       must update every record sharing that name, regardless of which Subject/Topic it's under.
+       (renameSubject above is already global in this sense; the tree's own per-node pencil-icon
+       rename still uses the scoped renameTopic/renameLevel, unaffected by these.) */
+    function renameTopicEverywhere(oldName, newName) {
+      rawData.forEach(r => { if (r.Topic === oldName) r.Topic = newName; });
+      grouped = groupData(rawData);
+      persistCurrentProgress();
+      refreshFilterOptions();
+      render();
+    }
+
+    function renameLevelEverywhere(oldName, newName) {
+      rawData.forEach(r => { if (r.Level === oldName) r.Level = newName; });
+      grouped = groupData(rawData);
+      persistCurrentProgress();
+      refreshFilterOptions();
+      render();
+    }
+
+    /* Prompts for a new name and runs the rename callback if it changed and isn't blank. */
+    function promptRename(kind, currentName, onRename) {
+      const input = prompt("Rename " + kind + ":", currentName);
+      if (input === null) return;
+      const trimmed = input.trim();
+      if (!trimmed || trimmed === currentName) return;
+      onRename(trimmed);
+    }
+
+    /* Requirement: a hidden-by-default "Manage Subjects / Topics / Levels" panel — a flat,
+       de-duplicated overview of every distinct Subject / Topic / Level NAME currently in
+       rawData (Topic and Level deduped by name alone, not per parent — "Basics" under both
+       "Java" and "Python" is one entry), each with a rename control. Renaming a Subject, or
+       renaming a Topic/Level from here, updates every matching record everywhere (see
+       renameSubject / renameTopicEverywhere / renameLevelEverywhere) — a batch cleanup tool,
+       not a single-node rename (the tree's own pencil icons still do that, scoped as before). */
+    function buildMetadataSummary() {
+      const subjects = new Map();  // subject -> count
+      const topics = new Map();    // topic -> count
+      const levels = new Map();    // level -> count
+
+      rawData.forEach(r => {
+        subjects.set(r.Subject, (subjects.get(r.Subject) || 0) + 1);
+        topics.set(r.Topic, (topics.get(r.Topic) || 0) + 1);
+        levels.set(r.Level, (levels.get(r.Level) || 0) + 1);
+      });
+
+      return {
+        subjects: [...subjects.entries()].map(([subject, count]) => ({ subject, count })).sort((a, b) => a.subject.localeCompare(b.subject)),
+        topics: [...topics.entries()].map(([topic, count]) => ({ topic, count })).sort((a, b) => a.topic.localeCompare(b.topic)),
+        levels: [...levels.entries()].map(([level, count]) => ({ level, count })).sort((a, b) => a.level.localeCompare(b.level))
+      };
+    }
+
+    function renderManageMetadataPanel() {
+      const container = document.getElementById("manageMetadataBody");
+      if (!container) return;
+      container.textContent = "";
+
+      if (!rawData.length) {
+        const empty = document.createElement("div");
+        empty.className = "text-muted small";
+        empty.textContent = "No data loaded yet.";
+        container.appendChild(empty);
+        return;
+      }
+
+      // Requirement: three independent single-select dropdowns (not cascading), each deduped by
+      // name alone — instead of a long scrollable permutation list. Picking Topic/Level renames
+      // that name across every record sharing it, wherever it appears (renameTopicEverywhere /
+      // renameLevelEverywhere), since the dropdown no longer distinguishes by parent.
+      const row = document.createElement("div");
+      row.className = "row g-3";
+      container.appendChild(row);
+
+      function buildDropdown(colLabel, items, getOptionLabel, onPick) {
+        const col = document.createElement("div");
+        col.className = "col-md-4";
+
+        const lbl = document.createElement("label");
+        lbl.className = "form-label small fw-bold";
+        lbl.textContent = colLabel;
+        col.appendChild(lbl);
+
+        const select = document.createElement("select");
+        select.className = "form-control";
+        select.appendChild(document.createElement("option")); // blank, for the placeholder
+        items.forEach((item, i) => {
+          const opt = document.createElement("option");
+          opt.value = String(i);
+          opt.textContent = getOptionLabel(item);
+          select.appendChild(opt);
+        });
+        col.appendChild(select);
+        row.appendChild(col);
+
+        const $select = $(select);
+        $select.select2({ placeholder: "Select a " + colLabel + "...", width: "100%", allowClear: true });
+        $select.on("select2:select", e => {
+          const item = items[Number(e.params.data.id)];
+          if (item) onPick(item);
+          // Reset so the same (or another) entry can be picked again, whether the rename went
+          // through or the prompt was cancelled.
+          $select.val(null).trigger("change.select2");
+        });
+      }
+
+      const summary = buildMetadataSummary();
+
+      buildDropdown("Subject", summary.subjects,
+        item => item.subject + " (" + item.count + ")",
+        item => promptRename("Subject", item.subject, newName => {
+          renameSubject(item.subject, newName);
+          renderManageMetadataPanel();
+        })
+      );
+
+      buildDropdown("Topic", summary.topics,
+        item => item.topic + " (" + item.count + ")",
+        item => promptRename("Topic", item.topic, newName => {
+          renameTopicEverywhere(item.topic, newName);
+          renderManageMetadataPanel();
+        })
+      );
+
+      buildDropdown("Level", summary.levels,
+        item => item.level + " (" + item.count + ")",
+        item => promptRename("Level", item.level, newName => {
+          renameLevelEverywhere(item.level, newName);
+          renderManageMetadataPanel();
+        })
+      );
+    }
+
+    /* Requirement #3: contextual "+ Add New Subject/Topic/Level" buttons, one prompt-driven
+       question is required to create the new node (a Subject/Topic/Level can't exist without
+       at least one Question row), so each quick-add always ends by creating one question. */
+    function quickAddQuestion(subject, topic, level) {
+      const questionText = prompt('New question for "' + subject + " / " + topic + " / " + level + '":');
+      if (questionText === null) return null;
+      const trimmed = questionText.trim();
+      if (!trimmed) { alert("Question text cannot be empty."); return null; }
+      const ord = getExistingOrder(subject, topic, level);
+      const siblingCount = rawData.filter(r => r.Subject === subject && r.Topic === topic && r.Level === level).length;
+      const newQ = {
+        Subject: subject, Topic: topic, Level: level,
+        Question: trimmed, Answer: "",
+        Done: false, ReviewLater: false, Duplicate: false, LessImportant: false, Starred: false,
+        Order: siblingCount,
+        SubjectOrder: ord.subjectOrder, TopicOrder: ord.topicOrder, LevelOrder: ord.levelOrder,
+        _id: uid("q")
+      };
+      rawData.push(newQ);
+      grouped = groupData(rawData);
+      persistCurrentProgress();
+      refreshFilterOptions();
+      showSuccessAlert("Question added successfully.");
+      return newQ;
+    }
+
+    function quickAddSubject() {
+      const subject = (prompt("New Subject name:") || "").trim();
+      if (!subject) return;
+      const topic = (prompt('First Topic name for "' + subject + '":') || "").trim();
+      if (!topic) { alert("Topic name is required."); return; }
+      const level = (prompt('First Level name for "' + topic + '":') || "").trim();
+      if (!level) { alert("Level name is required."); return; }
+      const newQ = quickAddQuestion(subject, topic, level);
+      if (!newQ) return;
+      pendingFocusQid = newQ._id;
+      render();
+    }
+
+    function quickAddTopic(subject) {
+      const topic = (prompt('New Topic name under "' + subject + '":') || "").trim();
+      if (!topic) return;
+      const level = (prompt('First Level name for "' + topic + '":') || "").trim();
+      if (!level) { alert("Level name is required."); return; }
+      const newQ = quickAddQuestion(subject, topic, level);
+      if (!newQ) return;
+      pendingFocusQid = newQ._id;
+      render();
+    }
+
+    function quickAddLevel(subject, topic) {
+      const level = (prompt('New Level name under "' + subject + " / " + topic + '":') || "").trim();
+      if (!level) return;
+      const newQ = quickAddQuestion(subject, topic, level);
+      if (!newQ) return;
+      pendingFocusQid = newQ._id;
+      render();
+    }
+
+    /* Small "+ Add ..." button, styled consistently, used by the three quick-add call sites. */
+    function createQuickAddButton(label, onClick) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-sm btn-outline-primary quick-add-row mb-2";
+      btn.textContent = label;
+      btn.addEventListener("click", onClick);
+      return btn;
+    }
+
+    /* ============ Filters ============ */
+    function populateFilterOptions() {
+      const saved = loadFilterPrefs(currentFileName);
+      activeFilters = {
+        Subject: (saved && saved.Subject) || [],
+        Topic: (saved && saved.Topic) || [],
+        Level: (saved && saved.Level) || [],
+        Status: (saved && saved.Status) || []
+      };
+      showStarredOnly = !!(saved && saved.starredOnly);
+      document.getElementById("starredOnlyToggle").checked = showStarredOnly;
+
+      const statusSelect = document.getElementById("statusFilter");
+      Array.from(statusSelect.options).forEach(o => { o.selected = activeFilters.Status.includes(o.value); });
+      refreshFilterOptions();
+      initSelect2("statusFilter", "Filter by Status");
+      document.getElementById("clearFiltersBtn").onclick = clearFilters;
+    }
+
+    /* Computes which values are still selectable for `dimension`, given the OTHER two active filters. */
+    function computeAvailableOptions(dimension) {
+      const values = new Set();
+      rawData.forEach(r => {
+        const matchSubject = dimension === "Subject" || !activeFilters.Subject.length || activeFilters.Subject.includes(r.Subject);
+        const matchTopic = dimension === "Topic" || !activeFilters.Topic.length || activeFilters.Topic.includes(r.Topic);
+        const matchLevel = dimension === "Level" || !activeFilters.Level.length || activeFilters.Level.includes(r.Level);
+        if (matchSubject && matchTopic && matchLevel) values.add(r[dimension]);
+      });
+      return [...values].sort();
+    }
+
+    /* Recomputes each filter's option list based on the current selections in the other two,
+       drops any selected value that's no longer valid, and rebuilds the Select2 pillboxes. */
+    function refreshFilterOptions() {
+      const dims = [
+        { key: "Subject", id: "subjectFilter", placeholder: "Filter by Subject" },
+        { key: "Topic", id: "topicFilter", placeholder: "Filter by Topic" },
+        { key: "Level", id: "levelFilter", placeholder: "Filter by Level" }
+      ];
+
+      dims.forEach(d => {
+        const options = computeAvailableOptions(d.key);
+        activeFilters[d.key] = activeFilters[d.key].filter(v => options.includes(v));
+        fillSelect(d.id, options, activeFilters[d.key]);
+      });
+
+      dims.forEach(d => initSelect2(d.id, d.placeholder));
+    }
+
+    function initSelect2(id, placeholder) {
+      const $select = $("#" + id);
+      if ($select.hasClass("select2-hidden-accessible")) {
+        $select.off("change");
+        $select.select2("destroy");
+      }
+      $select.select2({
+        placeholder: placeholder,
+        width: "100%",
+        allowClear: true
+      });
+      $select.on("change", onFilterChange);
+    }
+
+    function fillSelect(id, values, selectedValues) {
+      selectedValues = selectedValues || [];
+      const select = document.getElementById(id);
+      select.textContent = "";
+      values.forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v;
+        if (selectedValues.includes(v)) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    function getSelectedValues(id) {
+      const select = document.getElementById(id);
+      return Array.from(select.selectedOptions).map(o => o.value);
+    }
+
+    function onFilterChange() {
+      activeFilters.Subject = getSelectedValues("subjectFilter");
+      activeFilters.Topic = getSelectedValues("topicFilter");
+      activeFilters.Level = getSelectedValues("levelFilter");
+      activeFilters.Status = getSelectedValues("statusFilter");
+      refreshFilterOptions();
+      saveFilterPrefs();
+      render();
+    }
+
+    function clearFilters() {
+      activeFilters = { Subject: [], Topic: [], Level: [], Status: [] };
+      refreshFilterOptions();
+      $("#statusFilter").val(null).trigger("change.select2");
+      saveFilterPrefs();
+      render();
+    }
+
+    function passesFilter(subject, topic, level) {
+      const sOk = !activeFilters.Subject.length || activeFilters.Subject.includes(subject);
+      const tOk = !activeFilters.Topic.length || activeFilters.Topic.includes(topic);
+      const lOk = !activeFilters.Level.length || activeFilters.Level.includes(level);
+      return sOk && tOk && lOk;
+    }
+
+    /* Matches a question against the active Status filter (OR across selected statuses). */
+    function matchesStatusFilter(q) {
+      if (!activeFilters.Status.length) return true;
+      return activeFilters.Status.some(s => {
+        if (s === "Done") return !!q.Done;
+        if (s === "ReviewLater") return !!q.ReviewLater;
+        if (s === "LessImportant") return !!q.LessImportant;
+        if (s === "Starred") return !!q.Starred;
+        return false;
+      });
+    }
+
+    /* Requirement #3: reflects the currently open Subject / Topic / Level accordion chain
+       in the app header. Walks the DOM for whichever collapse is .show at each level, since
+       Bootstrap's accordion only allows one open item per level. */
+    function updateHeaderBreadcrumb() {
+      const el = document.getElementById("headerBreadcrumb");
+      if (!el) return;
+      const openSubject = document.querySelector("#subjectAccordion > .accordion-item:has(> .accordion-collapse.show)");
+      if (!openSubject) { el.textContent = ""; return; }
+
+      const parts = [openSubject.dataset.subject];
+      const topicAcc = openSubject.querySelector(":scope > .accordion-collapse.show > .accordion-body > .accordion");
+      const openTopic = topicAcc && topicAcc.querySelector(":scope > .accordion-item:has(> .accordion-collapse.show)");
+      if (openTopic) {
+        parts.push(openTopic.dataset.topic);
+        const levelAcc = openTopic.querySelector(":scope > .accordion-collapse.show > .accordion-body > .accordion");
+        const openLevel = levelAcc && levelAcc.querySelector(":scope > .accordion-item:has(> .accordion-collapse.show)");
+        if (openLevel) parts.push(openLevel.dataset.level);
+      }
+      el.textContent = parts.join(" / ");
+    }
+
+    /* Requirement: search bar above #rootAccordion — searches only the questions that pass the
+       currently active Subject/Topic/Level/Status filters (and the Starred-only toggle), reusing
+       the same grouped Subject > Topic > Level collapsible layout as the fuzzy-duplicate hints
+       (renderGroupedQuestionLinks): clickable group headers, hidden by default, one hyperlinked
+       question per row, capped at 10 results. Live-filters as you type. */
+    function populateQuestionSearch(questionsList) {
+      const wrap = document.getElementById("questionSearchWrap");
+      const input = document.getElementById("questionSearchInput");
+      const results = document.getElementById("questionSearchResults");
+      if (!wrap || !input || !results) return;
+
+      searchableQuestions = questionsList;
+
+      if (!rawData.length) {
+        wrap.style.display = "none";
+        return;
+      }
+      wrap.style.display = "block";
+
+      // A fresh filtered set may no longer match whatever was typed before this render() ran —
+      // clear the box rather than leave stale results on screen.
+      input.value = "";
+      results.textContent = "";
+      results.style.display = "none";
+
+      input.oninput = () => runQuestionSearch(input.value, results);
+    }
+
+    function runQuestionSearch(text, results) {
+      const norm = (text || "").trim().toLowerCase();
+      if (!norm) {
+        results.textContent = "";
+        results.style.display = "none";
+        return;
+      }
+      const matches = [];
+      for (const q of searchableQuestions) {
+        const haystack = (q.Subject + " " + q.Topic + " " + q.Level + " " + q.Question).toLowerCase();
+        if (haystack.includes(norm)) {
+          matches.push({ q, exact: q.Question.trim().toLowerCase() === norm });
+          if (matches.length >= 10) break;
+        }
+      }
+      // Requirement: clicking a result shows a "back to search" link in the target question's
+      // accordion (no "add anyway" here — there's no draft question to add from a plain search).
+      renderGroupedQuestionLinks(results, matches, {
+        label: matches.length ? "Matching questions:" : "",
+        sourceCtx: {
+          jumpBackLabel: "Back to search",
+          jumpBack: () => {
+            const wrap = document.getElementById("questionSearchWrap");
+            const input = document.getElementById("questionSearchInput");
+            if (wrap) requestAnimationFrame(() => wrap.scrollIntoView({ behavior: "smooth", block: "center" }));
+            if (input) input.focus();
+            flashHighlightItem(wrap);
+          }
+        }
+      });
+    }
+
+    /* ============ Render ============ */
+    function render() {
+      const root = document.getElementById("rootAccordion");
+      root.textContent = "";
+      badgeRefs = {};
+      scrollTargetEl = null;
+      expandDirection = tempMode ? "last" : "first";
+
+      updateStarredBadge();
+      updateHeaderBreadcrumb(); // clears stale text; re-set once the tree (re)opens below
+
+      const filtered = filterGroupedData();
+      const filteredQuestions = showStarredOnly
+        ? rawData.filter(q => q.Starred)
+        : flattenQuestions(filtered);
+      updateGlobalStatsBadges(filteredQuestions);
+      populateQuestionSearch(filteredQuestions); // Requirement: search only the currently filtered questions
+
+      if (!Object.keys(grouped).length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No data loaded yet. Upload a CSV to get started.";
+        root.appendChild(empty);
+        return;
+      }
+
+      if (showStarredOnly) {
+        renderStarredOnly(root);
+        return;
+      }
+
+      if (!Object.keys(filtered).length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No questions match the current filters.";
+        root.appendChild(empty);
+        return;
+      }
+
+      root.appendChild(createQuickAddButton("+ Add New Subject", quickAddSubject));
+
+      const subjectAccordion = document.createElement("div");
+      subjectAccordion.className = "accordion";
+      subjectAccordion.id = "subjectAccordion";
+
+      // While focusing a specific just-added question, suppress the tempMode first/last
+      // auto-expand entirely so we don't end up with two different branches expanded at once.
+      const focusing = !!pendingFocusQid;
+
+      const subjectKeys = Object.keys(filtered);
+      const subjectTargetIdx = expandDirection === "last" ? subjectKeys.length - 1 : 0;
+
+      subjectKeys.forEach((subject, i) => {
+        const isTarget = !focusing && tempMode && !editModeOn && i === subjectTargetIdx;
+        const subjectItem = createSubject(subject, filtered[subject], subjectAccordion.id, isTarget);
+        subjectAccordion.appendChild(subjectItem);
+      });
+
+      // drag-to-reorder: reorder top-level Subjects
+      Sortable.create(subjectAccordion, {
+        handle: ".drag-handle",
+        animation: 150,
+        ghostClass: "sortable-ghost",
+        chosenClass: "sortable-chosen",
+        onEnd: function () {
+          const newOrder = Array.from(subjectAccordion.children).map(el => el.dataset.subject);
+          reorderSubjects(newOrder);
+        }
+      });
+
+      root.appendChild(subjectAccordion);
+      updateHeaderBreadcrumb(); // reflects any isTarget auto-expand that just happened above
+
+      if (focusing) {
+        const targetQid = pendingFocusQid;
+        pendingFocusQid = null;
+        const qItem = expandToQuestion(targetQid);
+        if (qItem) {
+          updateHeaderBreadcrumb(); // expandToQuestion may have opened a different chain
+          requestAnimationFrame(() => {
+            qItem.scrollIntoView({ behavior: "smooth", block: "center" });
+          });
+          return;
+        }
+        // fall through to the normal scrollTargetEl handling below if the question wasn't found
+        // (e.g. hidden by an active filter)
+      }
+
+      if (scrollTargetEl) {
+        requestAnimationFrame(() => {
+          scrollTargetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
+    }
+
+    /* Expands the Subject -> Topic -> Level -> Question accordion chain for a specific question
+       (by _id) and returns its .accordion-item element, or null if it isn't in the current tree
+       (e.g. filtered out). Used to jump straight to a question right after adding it, instead of
+       relying on index-based first/last expansion. */
+    function expandToQuestion(qid) {
+      const qItem = document.querySelector('#subjectAccordion [data-qid="' + qid + '"]');
+      if (!qItem) return null;
+
+      // Only the Subject/Topic/Level ancestors are auto-opened; the question's own answer body
+      // stays collapsed and is just scrolled into view below.
+      let collapse = qItem.closest(".accordion-collapse");
+      while (collapse) {
+        const item = collapse.parentElement;
+        const btn = item.querySelector(":scope > .accordion-header > .accordion-button");
+        if (btn) expandItem(btn, collapse);
+        collapse = item.closest(".accordion-collapse");
+      }
+
+      return qItem;
+    }
+
+    /* Expands the Subject -> Topic -> Level accordion chain by name (not by question _id — used
+       after deleting a question, when there's no qid left to expand-to). Returns the Level's
+       .accordion-item element, or null if that Level no longer exists (e.g. it was the last
+       question in the Level, so the whole Level node was pruned from the tree). */
+    function expandLevelChain(subject, topic, level) {
+      const subjectItem = Array.from(document.querySelectorAll("#subjectAccordion > .accordion-item"))
+        .find(el => el.dataset.subject === subject);
+      if (!subjectItem) return null;
+      openChainItem(subjectItem);
+
+      const topicItem = Array.from(subjectItem.querySelectorAll(":scope > .accordion-collapse > .accordion-body > .accordion > .accordion-item"))
+        .find(el => el.dataset.topic === topic);
+      if (!topicItem) return null;
+      openChainItem(topicItem);
+
+      const levelItem = Array.from(topicItem.querySelectorAll(":scope > .accordion-collapse > .accordion-body > .accordion > .accordion-item"))
+        .find(el => el.dataset.level === level);
+      if (!levelItem) return null;
+      openChainItem(levelItem);
+
+      return levelItem;
+    }
+
+    function openChainItem(item) {
+      const btn = item.querySelector(":scope > .accordion-header > .accordion-button");
+      const collapse = item.querySelector(":scope > .accordion-collapse");
+      if (btn && collapse) expandItem(btn, collapse);
+    }
+
+    function expandItem(button, collapse) {
+      button.classList.remove("collapsed");
+      button.setAttribute("aria-expanded", "true");
+      collapse.classList.add("show");
+    }
+
+    /* Requirement: index numbers on question accordions, updated after drag-and-drop reordering
+       without needing a full render() (keeps the drag interaction snappy). */
+    function renumberQuestionAccordion(accordionEl) {
+      if (!accordionEl) return;
+      Array.from(accordionEl.children).forEach((el, i) => {
+        const idx = el.querySelector(":scope > .accordion-header .q-index");
+        if (idx) idx.textContent = (i + 1) + ".";
+      });
+    }
+
+    /* Requirement: clicking a Subject accordion always drills into its first Topic -> first
+       Level -> first Question, regardless of tempMode. Walks down "first child" at each nested
+       accordion level and expands it via expandItem (no Bootstrap Collapse instance involved,
+       so this never fires its own shown.bs.collapse events / cannot recurse into itself). */
+    function autoExpandFirstDescendant(accordionEl) {
+      if (!accordionEl) return;
+      const firstItem = accordionEl.querySelector(":scope > .accordion-item");
+      if (!firstItem) return;
+      // Only Subject/Topic/Level ("tree-item") accordions auto-open. Question items ("q-item")
+      // are never auto-opened, so the answer body stays collapsed until the user clicks it.
+      if (!firstItem.classList.contains("tree-item")) return;
+      const btn = firstItem.querySelector(":scope > .accordion-header > .accordion-button");
+      const col = firstItem.querySelector(":scope > .accordion-collapse");
+      if (!btn || !col) return;
+      if (btn.classList.contains("collapsed")) expandItem(btn, col);
+      const nestedAccordion = col.querySelector(":scope > .accordion-body > .accordion");
+      if (nestedAccordion) autoExpandFirstDescendant(nestedAccordion);
+    }
+
+    /* Single flat accordion of every starred question, with only a "Remove Star" action. */
+    function updateStarredBadge() {
+      const badge = document.getElementById("starredCountBadge");
+      const count = rawData.filter(q => q.Starred).length;
+      if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+    }
+
+    function renderStarredOnly(root) {
+      const starred = rawData.filter(q => q.Starred);
+
+      if (!starred.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No starred questions yet.";
+        root.appendChild(empty);
+        return;
+      }
+
+      const starredAccordion = document.createElement("div");
+      starredAccordion.className = "accordion";
+      starredAccordion.id = "starredAccordion";
+
+      starred.forEach((q, i) => {
+        starredAccordion.appendChild(createStarredQuestion(q, starredAccordion.id, i + 1));
+      });
+
+      root.appendChild(starredAccordion);
+    }
+
+    function createStarredQuestion(q, parentId, index) {
+      const itemId = uid("starq");
+      const item = document.createElement("div");
+      item.className = "accordion-item q-item";
+      item.dataset.qid = q._id;
+      applyStatusClass(item, q);
+
+      const header = document.createElement("h2");
+      header.className = "accordion-header";
+
+      const button = document.createElement("button");
+      button.className = "accordion-button collapsed";
+      button.type = "button";
+      button.setAttribute("data-bs-toggle", "collapse");
+      button.setAttribute("data-bs-target", "#" + itemId);
+
+      const qText = document.createElement("span");
+      qText.textContent = index + ". " + q.Question + " (" + q.Subject + " / " + q.Topic + " / " + q.Level + ")";
+      button.appendChild(qText);
+
+      const warnIcon = document.createElement("span");
+      warnIcon.title = "No answer provided yet";
+      warnIcon.textContent = "⚠️";
+      warnIcon.style.display = (q.Answer && q.Answer.trim()) ? "none" : "inline";
+      button.appendChild(warnIcon);
+
+      header.appendChild(button);
+      item.appendChild(header);
+
+      const collapse = document.createElement("div");
+      collapse.id = itemId;
+      collapse.className = "accordion-collapse collapse";
+      collapse.setAttribute("data-bs-parent", "#" + parentId);
+
+      const body = document.createElement("div");
+      body.className = "accordion-body answer-body";
+
+      const answerContent = document.createElement("div");
+      answerContent.innerHTML = q.Answer;
+
+      // Requirement: the starred-only view needs Review Later / Less Important / Starred as
+      // icon toggles (status-icon-row), not a standalone "Remove Star" text button.
+      const starredExtraRow = document.createElement("div");
+      starredExtraRow.className = "status-icon-row mb-2";
+
+      const starredReviewBtn = createStatusIconToggle({
+        key: "review", icon: "fa-solid fa-clock", label: "Review Later", initial: !!q.ReviewLater,
+        onToggle: active => {
+          q.ReviewLater = active;
+          if (active) q.Done = false; // same Done/ReviewLater exclusivity as the main list
+          applyStatusClass(item, q);
+          syncBadges(q);
+          persistCurrentProgress();
+        }
+      });
+
+      const starredLessBtn = createStatusIconToggle({
+        key: "less", icon: "fa-solid fa-down-long", label: "Less Important", initial: !!q.LessImportant,
+        onToggle: active => {
+          q.LessImportant = active;
+          syncBadges(q);
+          persistCurrentProgress();
+        }
+      });
+
+      const starredStarBtn = createStatusIconToggle({
+        key: "star", icon: "fa-solid fa-star", label: "Starred", initial: !!q.Starred,
+        onToggle: active => {
+          q.Starred = active;
+          persistCurrentProgress();
+          render(); // unstarring removes it from this list entirely
+        }
+      });
+
+      starredExtraRow.appendChild(starredReviewBtn);
+      starredExtraRow.appendChild(starredLessBtn);
+      starredExtraRow.appendChild(starredStarBtn);
+
+      body.appendChild(starredExtraRow);
+      body.appendChild(answerContent);
+      collapse.appendChild(body);
+      item.appendChild(collapse);
+
+      return item;
+    }
+
+    function createBadges(stats) {
+      const wrap = document.createDocumentFragment();
+
+      const total = document.createElement("span");
+      total.className = "badge bg-secondary ms-2 badge-count";
+      total.textContent = stats.total;
+      wrap.appendChild(total);
+
+      if (stats.done > 0) {
+        const done = document.createElement("span");
+        done.className = "badge ms-1 badge-count";
+        done.style.backgroundColor = "var(--done-line)";
+        done.style.color = "#fff";
+        done.textContent = "Done " + stats.done;
+        wrap.appendChild(done);
+      }
+
+      if (stats.review > 0) {
+        const review = document.createElement("span");
+        review.className = "badge ms-1 badge-count";
+        review.style.backgroundColor = "var(--review-line)";
+        review.style.color = "#fff";
+        review.textContent = "Review " + stats.review;
+        wrap.appendChild(review);
+      }
+
+      return wrap;
+    }
+
+    function syncBadges(q) {
+      ["S|" + q.Subject,
+      "T|" + q.Subject + "|" + q.Topic,
+      "L|" + q.Subject + "|" + q.Topic + "|" + q.Level
+      ].forEach(key => {
+        const ref = badgeRefs[key];
+        if (!ref) return;
+        const stats = computeStats(flattenQuestions(ref.node));
+        ref.holder.textContent = "";
+        ref.holder.appendChild(createBadges(stats));
+      });
+    }
+
+    /* Requirement: badges above #rootAccordion for Total / Filtered / Review / Done / Starred.
+       Total always reflects the full dataset. Filtered, Review, Done and Starred all reflect the
+       currently-visible set (post filters, or starred-only) — so they naturally equal the
+       full-dataset counts whenever no filter is active, since the visible set IS the full set
+       in that case. Review/Done/Starred badges are clickable shortcuts into the corresponding
+       filter. */
+    function updateGlobalStatsBadges(filteredQuestions) {
+      const holder = document.getElementById("globalStatsBadges");
+      if (!holder) return;
+      holder.textContent = "";
+      const total = rawData.length;
+      const filteredCount = filteredQuestions.length;
+      const done = filteredQuestions.filter(q => q.Done).length;
+      const review = filteredQuestions.filter(q => q.ReviewLater).length;
+      const starred = filteredQuestions.filter(q => q.Starred).length;
+
+      const make = (label, count, bg, onClick, title) => {
+        const b = document.createElement("span");
+        b.className = "badge me-2" + (onClick ? " stat-badge-clickable" : "");
+        b.style.backgroundColor = bg;
+        b.style.color = "#fff";
+        b.textContent = label + ": " + count;
+        if (title) b.title = title;
+        if (onClick) b.addEventListener("click", onClick);
+        return b;
+      };
+
+      holder.appendChild(make("Total", total, "#6c757d"));
+      holder.appendChild(make("Filtered", filteredCount, "var(--accent)"));
+      holder.appendChild(make("Review", review, "var(--review-line)",
+        () => addStatusFilterValue("ReviewLater"), "Click to filter by Review Later"));
+      holder.appendChild(make("Done", done, "var(--done-line)",
+        () => addStatusFilterValue("Done"), "Click to filter by Done"));
+      holder.appendChild(make("Starred", starred, "#e6bc2e",
+        () => checkStarredFilter(), "Click to show Starred only"));
+
+      // Requirement: export actions live inside the stats badges row itself.
+      if (rawData.length) {
+        const copyPlainBtn = document.createElement("button");
+        copyPlainBtn.type = "button";
+        copyPlainBtn.className = "btn btn-sm btn-outline-secondary ms-2";
+        copyPlainBtn.title = "Copy every currently-visible question, one per line";
+        copyPlainBtn.innerHTML = '<i class="fa-solid fa-copy"></i> Copy Visible';
+        copyPlainBtn.addEventListener("click", copyVisibleQuestionsPlain);
+        holder.appendChild(copyPlainBtn);
+
+        const copyHierarchyBtn = document.createElement("button");
+        copyHierarchyBtn.type = "button";
+        copyHierarchyBtn.className = "btn btn-sm btn-outline-secondary ms-2";
+        copyHierarchyBtn.title = "Copy the currently-visible Subject > Topic > Level > Question tree, tab-indented";
+        copyHierarchyBtn.innerHTML = '<i class="fa-solid fa-sitemap"></i> Copy Visible (Hierarchy)';
+        copyHierarchyBtn.addEventListener("click", copyVisibleQuestionsHierarchy);
+        holder.appendChild(copyHierarchyBtn);
+      }
+    }
+
+    /* Requirement: clicking Review/Done badges adds that value into the "Filter by Status"
+       select (on top of whatever's already selected there), switching off starred-only view
+       first so the normal filtered tree is what's shown. */
+    function addStatusFilterValue(value) {
+      showStarredOnly = false;
+      const starredCb = document.getElementById("starredOnlyToggle");
+      if (starredCb) starredCb.checked = false;
+      const current = getSelectedValues("statusFilter");
+      if (!current.includes(value)) current.push(value);
+      $("#statusFilter").val(current).trigger("change");
+    }
+
+    /* Requirement: clicking the Starred badge checks the Starred-only filter checkbox. */
+    function checkStarredFilter() {
+      const cb = document.getElementById("starredOnlyToggle");
+      if (!cb) return;
+      cb.checked = true;
+      cb.dispatchEvent(new Event("change"));
+    }
+
+    /* Requirement: success/danger alerts shown inline below add-question-wrap (per Level),
+       not as a floating popup. Each Level's alert holder carries a data-level-alert-key so we
+       can find the freshly-rendered holder for that exact Subject/Topic/Level after render(). */
+    function levelAlertKey(subject, topic, level) {
+      return subject + "\u0001" + topic + "\u0001" + level;
+    }
+
+    function showLevelAlert(subject, topic, level, type, message, qidToScrollTo) {
+      const key = levelAlertKey(subject, topic, level);
+      const holder = Array.from(document.querySelectorAll(".level-alert-holder"))
+        .find(h => h.dataset.levelAlertKey === key);
+      if (!holder) return;
+      holder.textContent = "";
+
+      const alertEl = document.createElement("div");
+      alertEl.className = "alert alert-" + type + " alert-dismissible fade show mt-2 mb-2";
+      alertEl.setAttribute("role", "alert");
+
+      if (qidToScrollTo) {
+        const link = document.createElement("a");
+        link.href = "#";
+        link.className = "alert-link";
+        link.textContent = message;
+        link.addEventListener("click", e => {
+          e.preventDefault();
+          const target = document.querySelector('[data-qid="' + qidToScrollTo + '"]');
+          if (!target) return;
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+          flashHighlightItem(target);
+        });
+        alertEl.appendChild(link);
+      } else {
+        alertEl.appendChild(document.createTextNode(message));
+      }
+
+      const closeBtn = document.createElement("button");
+      closeBtn.type = "button";
+      closeBtn.className = "btn-close";
+      closeBtn.setAttribute("data-bs-dismiss", "alert");
+      closeBtn.setAttribute("aria-label", "Close");
+      alertEl.appendChild(closeBtn);
+      holder.appendChild(alertEl);
+    }
+
+    /* Requirement: Bootstrap alert-success shown when a question is added successfully.
+       Auto-dismisses after 3s; user can also dismiss manually via the close button. */
+    function showSuccessAlert(message) {
+      const holder = document.getElementById("globalAlertHolder");
+      if (!holder) return;
+      const alertEl = document.createElement("div");
+      alertEl.className = "alert alert-success alert-dismissible fade show shadow-sm";
+      alertEl.setAttribute("role", "alert");
+      alertEl.textContent = message;
+      const closeBtn = document.createElement("button");
+      closeBtn.type = "button";
+      closeBtn.className = "btn-close";
+      closeBtn.setAttribute("data-bs-dismiss", "alert");
+      closeBtn.setAttribute("aria-label", "Close");
+      alertEl.appendChild(closeBtn);
+      holder.appendChild(alertEl);
+      setTimeout(() => {
+        if (!alertEl.parentNode) return;
+        const inst = bootstrap.Alert.getOrCreateInstance(alertEl);
+        inst.close();
+      }, 3000);
+    }
+
+    /* Requirement: alert if the question already exists in the current accordion (case/whitespace
+       insensitive match against Question text) before adding a single question. */
+    function questionExistsIn(questions, text) {
+      const norm = t => (t || "").trim().toLowerCase();
+      const target = norm(text);
+      return questions.some(q => norm(q.Question) === target);
+    }
+
+    /* Requirement: fuzzy-duplicate hints while typing a single question. Words of 6+ characters
+       are treated as "significant" — short/common words (where, when, is, are, ...) are already
+       excluded by the length cutoff alone, no separate stopword list needed. */
+    function significantWords(text) {
+      return (text || "")
+        .toLowerCase()
+        .split(/[^a-z0-9]+/i)
+        .filter(w => w.length > 5);
+    }
+
+    /* Scans the whole dataset (not just the current Level) for existing questions that share at
+       least one significant word with the given text. Ranked by relevance (most shared
+       significant words first; an exact text match always ranks highest), capped at the 10
+       best matches across the whole dataset. Each result is { q, sharedCount, exact }. */
+    function findFuzzyMatches(text) {
+      const words = new Set(significantWords(text));
+      if (!words.size) return [];
+      const normTarget = (text || "").trim().toLowerCase();
+      const scored = [];
+      rawData.forEach(q => {
+        const qWords = significantWords(q.Question);
+        const sharedCount = qWords.filter(w => words.has(w)).length;
+        if (sharedCount > 0) {
+          scored.push({ q, sharedCount, exact: q.Question.trim().toLowerCase() === normTarget });
+        }
+      });
+      scored.sort((a, b) => (b.exact - a.exact) || (b.sharedCount - a.sharedCount));
+      return scored.slice(0, 10);
+    }
+
+    /* Briefly flashes a question's accordion-button so a just-navigated-to item is obvious. Uses
+       an inline !important override (removed after the flash) rather than a CSS animation class,
+       since CSS animations can never out-rank the !important status-done/status-review background
+       rules — a plain animation class here would be invisible on Done/Review Later questions. */
+    const FLASH_DURATION_MS = 10000;
+
+    /* Single shared highlight mechanism for "you were just taken here" moments: Up/Down/Top/Bottom
+       moves, drag-and-drop reordering, picking a result from the question search dropdown, the
+       level-alert "click to view" link, and fuzzy-duplicate navigation. Highlights the WHOLE
+       accordion header for 10s (fading out automatically), with a close icon to dismiss early.
+       el: either a .q-item/.tree-item accordion-item (its .accordion-header child is used), or any
+       other element to overlay directly (e.g. the add-question-wrap, for the fuzzy "jump back" link).
+       sourceCtx (optional): { jumpBack(), addAnyway() } — when given (only from a fuzzy-hint
+       navigation), two extra Font Awesome icons appear alongside the dismiss icon, fading out
+       together with the highlight, letting the user hop straight back to their draft or commit
+       it as-is without hunting back through the tree. */
+    /* sourceCtx (optional): { jumpBack(), jumpBackLabel, addAnyway(targetEl) } — jumpBack and
+       addAnyway are independently optional, so a plain "came from search" navigation can offer
+       just the back link while a fuzzy-duplicate navigation offers both. addAnyway receives the
+       flash-highlighted element itself (the target question's .q-item) so it can act on it. */
+    function flashHighlightItem(el, sourceCtx) {
+      if (!el) return;
+      const surface = el.querySelector(":scope > .accordion-header") || el;
+      if (getComputedStyle(surface).position === "static") surface.style.position = "relative";
+      if (surface._flashCleanup) surface._flashCleanup();
+
+      const overlay = document.createElement("div");
+      overlay.className = "flash-overlay";
+      surface.appendChild(overlay);
+
+      const actionIcons = document.createElement("div");
+      actionIcons.className = "flash-action-icons";
+
+      if (sourceCtx && sourceCtx.jumpBack) {
+        const backBtn = document.createElement("button");
+        backBtn.type = "button";
+        backBtn.className = "flash-action-icon-btn";
+        backBtn.title = sourceCtx.jumpBackLabel || "Back to your draft question";
+        backBtn.innerHTML = '<i class="fa-solid fa-rotate-left"></i>';
+        backBtn.addEventListener("click", e => { e.stopPropagation(); sourceCtx.jumpBack(); });
+        actionIcons.appendChild(backBtn);
+      }
+
+      if (sourceCtx && sourceCtx.addAnyway) {
+        const addBtn = document.createElement("button");
+        addBtn.type = "button";
+        addBtn.className = "flash-action-icon-btn";
+        addBtn.title = "Add my question here (pre-filled)";
+        addBtn.innerHTML = '<i class="fa-solid fa-plus"></i>';
+        addBtn.addEventListener("click", e => { e.stopPropagation(); sourceCtx.addAnyway(el); });
+        actionIcons.appendChild(addBtn);
+      }
+
+      const dismissBtn = document.createElement("button");
+      dismissBtn.type = "button";
+      dismissBtn.className = "flash-action-icon-btn flash-dismiss-btn";
+      dismissBtn.title = "Dismiss highlight";
+      dismissBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+      dismissBtn.addEventListener("click", e => {
+        e.stopPropagation();
+        if (surface._flashCleanup) surface._flashCleanup();
+      });
+      actionIcons.appendChild(dismissBtn);
+
+      // Requirement: place flash-action-icons as a normal in-flow flex child, right before the
+      // status-cluster/delete icons, instead of absolutely overlapping them — so both sets of
+      // icons stay fully visible and clickable during the flash. Headers without that cluster
+      // (Subject/Topic/Level tree headers, or a plain surface like the add-question-wrap used
+      // for "jump back") fall back to a right-edge overlay.
+      const compactRows = surface.querySelectorAll(":scope > .status-icon-row.compact");
+      const insertBeforeEl = compactRows.length ? compactRows[compactRows.length - 1] : null;
+      if (insertBeforeEl) {
+        surface.insertBefore(actionIcons, insertBeforeEl);
+      } else {
+        actionIcons.classList.add("flash-action-icons-overlay");
+        surface.appendChild(actionIcons);
+      }
+
+      requestAnimationFrame(() => {
+        overlay.classList.add("fade");
+        actionIcons.classList.add("fade");
+      });
+
+      const timeoutId = setTimeout(() => {
+        overlay.remove();
+        actionIcons.remove();
+        surface._flashCleanup = null;
+      }, FLASH_DURATION_MS);
+
+      surface._flashCleanup = () => {
+        clearTimeout(timeoutId);
+        overlay.remove();
+        actionIcons.remove();
+        surface._flashCleanup = null;
+      };
+    }
+
+    /* Expands the tree to and flash-highlights an existing question elsewhere in the dataset —
+       used when the user clicks a fuzzy-duplicate suggestion while adding a new question.
+       sourceCtx (optional): { jumpBack(), addAnyway() }, see flashHighlightItem. */
+    function jumpToQuestion(qid, sourceCtx) {
+      const qItem = expandToQuestion(qid);
+      if (!qItem) {
+        alert("That question is hidden by the current filters — clear filters to view it.");
+        return;
+      }
+      updateHeaderBreadcrumb();
+      requestAnimationFrame(() => {
+        qItem.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+      flashHighlightItem(qItem, sourceCtx);
+    }
+
+    /* Requirement: "Add anyway" should add value, not just re-navigate back to the original
+       draft — it opens and pre-fills the TARGET question's OWN Level's "+ Add Question" panel
+       (every Level has one, from createAddQuestionPanel), so the user's draft gets saved right
+       alongside the existing similar question they just reviewed, in that same Level. Returns the
+       opened add-question-wrap (for scrolling/highlighting), or null if it couldn't be located. */
+    function openLevelAddPanelPrefilled(qItem, questionText, answerText) {
+      const body = qItem.closest(".accordion-body");
+      if (!body) return null;
+      const wrap = body.querySelector(":scope > .add-question-wrap");
+      if (!wrap) return null;
+      const singlePanel = wrap.querySelector(":scope > .add-question-panel");
+      if (!singlePanel) return null;
+      const addBtn = wrap.querySelector(":scope > .d-flex.gap-2 > button:first-child");
+      if (singlePanel.style.display === "none" && addBtn) addBtn.click(); // also hides bulkPanel
+
+      const textareas = singlePanel.querySelectorAll("textarea");
+      if (textareas[0]) {
+        textareas[0].value = questionText || "";
+        textareas[0].dispatchEvent(new Event("input")); // refresh its own live fuzzy-hint preview
+      }
+      if (textareas[1]) textareas[1].value = answerText || "";
+
+      // Requirement: when this pre-filled draft gets saved, it should land directly after the
+      // matched question that triggered "Add anyway" — trySaveQuestion (in createAddQuestionPanel)
+      // reads and clears this once it's used.
+      singlePanel.dataset.insertAfterQid = qItem.dataset.qid;
+
+      return wrap;
+    }
+
+    /* Requirement: "Add Question After" — instantly creates and saves a new question, using the
+       given draft text/status, directly after matchedQ within matchedQ's OWN Level (no manual
+       Save step, unlike "Add anyway"/openLevelAddPanelPrefilled above), then jumps to it. */
+    function addQuestionAfterMatch(matchedQ, questionText, answerText, draft) {
+      const arr = grouped[matchedQ.Subject] && grouped[matchedQ.Subject][matchedQ.Topic] &&
+        grouped[matchedQ.Subject][matchedQ.Topic][matchedQ.Level];
+      if (!arr) return;
+
+      const text = (questionText || "").trim();
+      if (!text) {
+        alert("Question text cannot be empty.");
+        return;
+      }
+      if (questionExistsIn(arr, text)) {
+        alert("This question already exists under " + matchedQ.Subject + " / " + matchedQ.Topic + " / " + matchedQ.Level + ".");
+        return;
+      }
+
+      const ord = getExistingOrder(matchedQ.Subject, matchedQ.Topic, matchedQ.Level);
+      const newQ = {
+        Subject: matchedQ.Subject, Topic: matchedQ.Topic, Level: matchedQ.Level,
+        Question: text, Answer: answerText || "",
+        Done: draft.Done, ReviewLater: draft.ReviewLater,
+        Duplicate: draft.Duplicate, LessImportant: draft.LessImportant, Starred: draft.Starred,
+        Order: arr.length,
+        SubjectOrder: ord.subjectOrder, TopicOrder: ord.topicOrder, LevelOrder: ord.levelOrder,
+        _id: uid("q")
+      };
+      arr.push(newQ);
+      rawData.push(newQ);
+
+      const newOrderIds = idsWithInsertAfter(arr.map(q => q._id), newQ._id, matchedQ._id);
+      reorderLevelQuestions(matchedQ.Subject, matchedQ.Topic, matchedQ.Level, newOrderIds);
+      persistCurrentProgress();
+      refreshFilterOptions();
+
+      pendingFocusQid = newQ._id;
+      render();
+      showSuccessAlert('Added: "' + newQ.Question + '"');
+      flashHighlightItem(document.querySelector('[data-qid="' + newQ._id + '"]'));
+    }
+
+    /* Requirement: shared rendering for any "list of questions grouped by Subject > Topic > Level,
+       collapsed by default, one question per row, each a direct link" UI — used by both the
+       fuzzy-duplicate suggestions (add-question forms) and the question search results.
+       matches: array of { q, exact }. opts: { label, sourceCtx } — label is the heading text
+       (omit/empty to skip it); sourceCtx (optional) is passed through to jumpToQuestion so the
+       target question's accordion can offer temporary back/add-anyway icons (only meaningful for
+       the fuzzy-duplicate case, not search). Groups containing an exact match auto-open. */
+    function renderGroupedQuestionLinks(container, matches, opts) {
+      opts = opts || {};
+      container.textContent = "";
+      if (!matches.length) {
+        container.style.display = "none";
+        return;
+      }
+      container.style.display = "block";
+
+      if (opts.label) {
+        const label = document.createElement("div");
+        label.className = "fuzzy-hint-label";
+        label.textContent = opts.label;
+        container.appendChild(label);
+      }
+
+      const groups = [];
+      const groupIndex = new Map();
+      matches.forEach(m => {
+        const q = m.q;
+        const key = q.Subject + "" + q.Topic + "" + q.Level;
+        let group = groupIndex.get(key);
+        if (!group) {
+          group = { subject: q.Subject, topic: q.Topic, level: q.Level, matches: [] };
+          groupIndex.set(key, group);
+          groups.push(group);
+        }
+        group.matches.push(m);
+      });
+
+      // Requirement: auto-open the first group containing an exact-text match (the yellow-
+      // highlighted rows) so the most alarming duplicate is immediately visible, not one more
+      // click away. Every other group still starts collapsed.
+      const autoOpenGroup = groups.find(g => g.matches.some(m => m.exact));
+
+      groups.forEach(group => {
+        const groupWrap = document.createElement("div");
+        groupWrap.className = "fuzzy-hint-group";
+
+        const groupHeader = document.createElement("a");
+        groupHeader.href = "#";
+        groupHeader.className = "fuzzy-hint-group-header";
+        groupHeader.textContent = group.subject + " > " + group.topic + " > " + group.level +
+          " (" + group.matches.length + ")";
+
+        const list = document.createElement("div");
+        list.className = "fuzzy-hint-group-list";
+        const startOpen = group === autoOpenGroup;
+        list.style.display = startOpen ? "block" : "none";
+        if (startOpen) groupHeader.classList.add("is-open");
+
+        groupHeader.addEventListener("click", e => {
+          e.preventDefault();
+          const open = list.style.display !== "none";
+          list.style.display = open ? "none" : "block";
+          groupHeader.classList.toggle("is-open", !open);
+        });
+
+        group.matches.forEach(m => {
+          const row = document.createElement("div");
+          row.className = "fuzzy-hint-row" + (m.exact ? " exact-match" : "");
+          const link = document.createElement("a");
+          link.href = "#";
+          link.className = "alert-link";
+          link.textContent = m.q.Question;
+          if (m.exact) link.title = "Exact match — this question already exists word-for-word.";
+          link.addEventListener("click", e => {
+            e.preventDefault();
+            jumpToQuestion(m.q._id, opts.sourceCtx);
+          });
+          row.appendChild(link);
+
+          // Requirement: icon-only "Add Question After" — only meaningful when there's a draft
+          // question to add (the fuzzy-duplicate case), not for plain search results.
+          if (opts.sourceCtx && opts.sourceCtx.addAfter) {
+            const addAfterLink = document.createElement("a");
+            addAfterLink.href = "#";
+            addAfterLink.className = "fuzzy-hint-add-after";
+            addAfterLink.title = "Add Question After";
+            addAfterLink.setAttribute("aria-label", "Add my question after: " + m.q.Question);
+            addAfterLink.innerHTML = '<i class="fa-solid fa-square-plus"></i>';
+            addAfterLink.addEventListener("click", e => {
+              e.preventDefault();
+              e.stopPropagation();
+              opts.sourceCtx.addAfter(m.q);
+            });
+            row.appendChild(addAfterLink);
+          }
+
+          list.appendChild(row);
+        });
+
+        groupWrap.appendChild(groupHeader);
+        groupWrap.appendChild(list);
+        container.appendChild(groupWrap);
+      });
+    }
+
+    /* sourceCtx (optional): { jumpBack(), addAnyway() } — passed through to
+       renderGroupedQuestionLinks so the target question's accordion can offer temporary icons
+       back to this add form. Shared by both single-question add forms (per-Level panel and Add
+       New Subject/Topic/Level). */
+    function populateFuzzyHint(container, questionText, sourceCtx) {
+      const matches = findFuzzyMatches(questionText);
+      renderGroupedQuestionLinks(container, matches, {
+        label: "Possibly similar question(s) already exist, ranked by relevance:",
+        sourceCtx: sourceCtx
+      });
+    }
+
+    /* Requirement: delete option in status-icon-row, deletes immediately (after confirm()). */
+    function deleteQuestionById(qid) {
+      const idx = rawData.findIndex(r => r._id === qid);
+      if (idx === -1) return;
+      rawData.splice(idx, 1);
+      grouped = groupData(rawData);
+      persistCurrentProgress();
+      refreshFilterOptions();
+      render();
+    }
+
+    /* Requirement: contextual tree-copy — what gets copied depends on where the 📋 lives:
+       - Subject: full tab-indented hierarchy, Subject / \tTopic / \t\tLevel / \t\t\tQuestion.
+       - Topic:   tab-indented hierarchy one level shallower, Topic / \tLevel / \t\tQuestion.
+       - Level:   unchanged — plain one-per-line question list (no hierarchy left to show). */
+    function buildTreeCopyText(node, kind, label) {
+      if (kind === "level") {
+        const qs = node;
+        return { text: qs.map(q => q.Question).join("\n"), count: qs.length };
+      }
+      const lines = [label];
+      let count = 0;
+      if (kind === "subject") {
+        Object.keys(node).forEach(topic => {
+          lines.push("\t" + topic);
+          Object.keys(node[topic]).forEach(level => {
+            lines.push("\t\t" + level);
+            node[topic][level].forEach(q => { lines.push("\t\t\t" + q.Question); count++; });
+          });
+        });
+      } else if (kind === "topic") {
+        Object.keys(node).forEach(level => {
+          lines.push("\t" + level);
+          node[level].forEach(q => { lines.push("\t\t" + q.Question); count++; });
+        });
+      }
+      return { text: lines.join("\n"), count };
+    }
+
+    /* getNode() is re-evaluated at click time against the closure's (already-filtered) node so
+       it always copies exactly what's currently visible. kind: "subject" | "topic" | "level";
+       label (Subject or Topic's own name) is only needed for the two hierarchy-producing kinds. */
+    function createCopyQuestionsButton(getNode, kind, label) {
+      const btn = document.createElement("span");
+      btn.className = "tree-copy-btn";
+      btn.title = kind === "level"
+        ? "Copy all visible questions (one per line)"
+        : "Copy all visible questions (tab-indented hierarchy)";
+      btn.textContent = "📋";
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const { text, count } = buildTreeCopyText(getNode(), kind, label);
+        if (!count) { alert("No questions to copy."); return; }
+        navigator.clipboard.writeText(text).then(() => {
+          showSuccessAlert(count + " question(s) copied to clipboard.");
+        }).catch(() => {
+          alert("Copy failed — clipboard access may be blocked by the browser.");
+        });
+      });
+      return btn;
+    }
+
+    /* Requirement: copy a question's text (prefixed with its Subject and Topic, space-separated)
+       to the clipboard, then open a new tab searching Google for that same text. */
+    function copyAndSearchQuestion(q) {
+      const searchText = q.Subject + " - " + q.Topic + " - " + q.Question;
+      navigator.clipboard.writeText(searchText).catch(() => { /* still proceed to search below */ });
+      window.open("https://www.google.com/search?q=" + encodeURIComponent(searchText), "_blank", "noopener,noreferrer");
+    }
+
+    function createSubject(subject, topics, parentId, isTarget) {
+      const itemId = uid("subj");
+      const item = document.createElement("div");
+      item.className = "accordion-item tree-item";
+      item.dataset.subject = subject;
+
+      const header = document.createElement("h2");
+      header.className = "accordion-header";
+
+      const dragHandle = document.createElement("span");
+      dragHandle.className = "drag-handle";
+      dragHandle.title = "Drag to reorder";
+      dragHandle.textContent = "⠿";
+
+      const button = document.createElement("button");
+      button.className = "accordion-button collapsed";
+      button.type = "button";
+      button.setAttribute("data-bs-toggle", "collapse");
+      button.setAttribute("data-bs-target", "#" + itemId);
+      button.textContent = subject;
+
+      const stats = computeStats(flattenQuestions(topics));
+      const badgeHolder = document.createElement("span");
+      badgeHolder.className = "badge-holder";
+      badgeHolder.appendChild(createBadges(stats));
+      button.appendChild(badgeHolder);
+      badgeRefs["S|" + subject] = { holder: badgeHolder, node: topics };
+
+      const editSubjectBtn = document.createElement("span");
+      editSubjectBtn.className = "tree-edit-btn";
+      editSubjectBtn.title = "Rename Subject";
+      editSubjectBtn.textContent = "✎";
+      editSubjectBtn.addEventListener("click", () => promptRename("Subject", subject, newName => renameSubject(subject, newName)));
+      const copySubjectBtn = createCopyQuestionsButton(() => topics, "subject", subject);
+
+      header.appendChild(dragHandle);
+      header.appendChild(button);
+      header.appendChild(editSubjectBtn);
+      header.appendChild(copySubjectBtn);
+      item.appendChild(header);
+
+      const collapse = document.createElement("div");
+      collapse.id = itemId;
+      collapse.className = "accordion-collapse collapse";
+      collapse.setAttribute("data-bs-parent", "#" + parentId);
+
+      const body = document.createElement("div");
+      body.className = "accordion-body";
+
+      const topicAccordionId = uid("topicAcc");
+      const topicAccordion = document.createElement("div");
+      topicAccordion.className = "accordion";
+      topicAccordion.id = topicAccordionId;
+
+      const topicKeys = Object.keys(topics);
+      const topicTargetIdx = expandDirection === "last" ? topicKeys.length - 1 : 0;
+
+      topicKeys.forEach((topic, i) => {
+        const childIsTarget = isTarget && i === topicTargetIdx;
+        const topicItem = createTopic(subject, topic, topics[topic], topicAccordionId, childIsTarget);
+        topicAccordion.appendChild(topicItem);
+      });
+
+      body.appendChild(createQuickAddButton("+ Add New Topic", () => quickAddTopic(subject)));
+      body.appendChild(topicAccordion);
+      collapse.appendChild(body);
+      item.appendChild(collapse);
+
+      // Requirement #1: any click that opens a Subject accordion drills into its first
+      // Topic -> first Level -> first Question. shown.bs.collapse bubbles, so only react
+      // when it's this exact collapse (not a nested one) firing.
+      collapse.addEventListener("shown.bs.collapse", e => {
+        if (e.target !== collapse) return;
+        autoExpandFirstDescendant(topicAccordion);
+      });
+
+      if (isTarget) expandItem(button, collapse);
+
+      // drag-to-reorder: reorder Topics within this Subject
+      Sortable.create(topicAccordion, {
+        handle: ".drag-handle",
+        animation: 150,
+        ghostClass: "sortable-ghost",
+        chosenClass: "sortable-chosen",
+        onEnd: function () {
+          const newOrder = Array.from(topicAccordion.children).map(el => el.dataset.topic);
+          reorderTopics(subject, newOrder);
+        }
+      });
+
+      return item;
+    }
+
+    function createTopic(subject, topic, levels, parentId, isTarget) {
+      const itemId = uid("topic");
+      const item = document.createElement("div");
+      item.className = "accordion-item tree-item";
+      item.dataset.topic = topic;
+
+      const header = document.createElement("h2");
+      header.className = "accordion-header";
+
+      const dragHandle = document.createElement("span");
+      dragHandle.className = "drag-handle";
+      dragHandle.title = "Drag to reorder";
+      dragHandle.textContent = "⠿";
+
+      const button = document.createElement("button");
+      button.className = "accordion-button collapsed";
+      button.type = "button";
+      button.setAttribute("data-bs-toggle", "collapse");
+      button.setAttribute("data-bs-target", "#" + itemId);
+      button.textContent = topic;
+
+      const stats = computeStats(flattenQuestions(levels));
+      const badgeHolder = document.createElement("span");
+      badgeHolder.className = "badge-holder";
+      badgeHolder.appendChild(createBadges(stats));
+      button.appendChild(badgeHolder);
+      badgeRefs["T|" + subject + "|" + topic] = { holder: badgeHolder, node: levels };
+
+      const editTopicBtn = document.createElement("span");
+      editTopicBtn.className = "tree-edit-btn";
+      editTopicBtn.title = "Rename Topic";
+      editTopicBtn.textContent = "✎";
+      editTopicBtn.addEventListener("click", () => promptRename("Topic", topic, newName => renameTopic(subject, topic, newName)));
+      const copyTopicBtn = createCopyQuestionsButton(() => levels, "topic", topic);
+
+      header.appendChild(dragHandle);
+      header.appendChild(button);
+      header.appendChild(editTopicBtn);
+      header.appendChild(copyTopicBtn);
+      item.appendChild(header);
+
+      const collapse = document.createElement("div");
+      collapse.id = itemId;
+      collapse.className = "accordion-collapse collapse";
+      collapse.setAttribute("data-bs-parent", "#" + parentId);
+
+      const body = document.createElement("div");
+      body.className = "accordion-body";
+
+      const levelAccordionId = uid("levelAcc");
+      const levelAccordion = document.createElement("div");
+      levelAccordion.className = "accordion";
+      levelAccordion.id = levelAccordionId;
+
+      const levelKeys = Object.keys(levels);
+      const levelTargetIdx = expandDirection === "last" ? levelKeys.length - 1 : 0;
+
+      levelKeys.forEach((level, i) => {
+        const childIsTarget = isTarget && i === levelTargetIdx;
+        const levelItem = createLevel(subject, topic, level, levels[level], levelAccordionId, childIsTarget);
+        levelAccordion.appendChild(levelItem);
+      });
+
+      body.appendChild(createQuickAddButton("+ Add New Level", () => quickAddLevel(subject, topic)));
+      body.appendChild(levelAccordion);
+      collapse.appendChild(body);
+      item.appendChild(collapse);
+
+      // Requirement: clicking a Topic accordion always drills into its first Level -> first
+      // Question, same as clicking a Subject drills into its first Topic. Mirrors the listener
+      // in createSubject; only reacts to this exact collapse (not a nested one) firing.
+      collapse.addEventListener("shown.bs.collapse", e => {
+        if (e.target !== collapse) return;
+        autoExpandFirstDescendant(levelAccordion);
+      });
+
+      if (isTarget) expandItem(button, collapse);
+
+      // drag-to-reorder: reorder Levels within this Topic
+      Sortable.create(levelAccordion, {
+        handle: ".drag-handle",
+        animation: 150,
+        ghostClass: "sortable-ghost",
+        chosenClass: "sortable-chosen",
+        onEnd: function () {
+          const newOrder = Array.from(levelAccordion.children).map(el => el.dataset.level);
+          reorderLevels(subject, topic, newOrder);
+        }
+      });
+
+      return item;
+    }
+
+    /* Add Question (single, with Answer + status icons) and Bulk Add (CSV textarea) UI.
+       Lives inside each Level accordion, where Subject/Topic/Level are already fixed. */
+    function createAddQuestionPanel(subject, topic, level, questions) {
+      const wrap = document.createElement("div");
+      wrap.className = "add-question-wrap mt-2";
+
+      const toolbar = document.createElement("div");
+      toolbar.className = "d-flex gap-2 mb-2";
+
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "btn btn-sm btn-outline-primary";
+      addBtn.textContent = "+ Add Question";
+
+      const bulkBtn = document.createElement("button");
+      bulkBtn.type = "button";
+      bulkBtn.className = "btn btn-sm btn-outline-secondary";
+      bulkBtn.textContent = "+ Bulk Add (CSV)";
+
+      toolbar.appendChild(addBtn);
+      toolbar.appendChild(bulkBtn);
+      wrap.appendChild(toolbar);
+
+      /* ---- Single add form ---- */
+      const singlePanel = document.createElement("div");
+      singlePanel.className = "add-question-panel";
+      singlePanel.style.display = "none";
+
+      const qInput = document.createElement("textarea");
+      qInput.className = "form-control form-control-sm mb-2";
+      qInput.rows = 2;
+      qInput.placeholder = "Question text...";
+
+      /* Requirement: fuzzy-duplicate hints — as the user types, surface existing questions
+         (anywhere in the dataset) that share a significant word; clicking one jumps to it. */
+      const fuzzyHint = document.createElement("div");
+      fuzzyHint.className = "small text-muted mb-2";
+      fuzzyHint.style.display = "none";
+
+      const aInput = document.createElement("textarea");
+      aInput.className = "form-control form-control-sm mb-2";
+      aInput.rows = 3;
+      aInput.placeholder = "Answer (HTML allowed)...";
+
+      function renderFuzzyHint() {
+        populateFuzzyHint(fuzzyHint, qInput.value, {
+          jumpBack: () => {
+            requestAnimationFrame(() => wrap.scrollIntoView({ behavior: "smooth", block: "center" }));
+            qInput.focus();
+            flashHighlightItem(wrap);
+          },
+          // Requirement: "Add anyway" does NOT save automatically, and doesn't just bounce back
+          // to this draft either — it opens and pre-fills the TARGET question's own Level's add
+          // panel with this draft, so the user saves it right alongside the question they just
+          // reviewed (see openLevelAddPanelPrefilled).
+          addAnyway: targetItem => {
+            const openedWrap = openLevelAddPanelPrefilled(targetItem, qInput.value, aInput.value);
+            if (!openedWrap) return;
+            requestAnimationFrame(() => openedWrap.scrollIntoView({ behavior: "smooth", block: "center" }));
+            flashHighlightItem(openedWrap);
+          },
+          // Requirement: "Add Question After" auto-saves the draft directly after the matched
+          // question, in ITS Level (not this panel where the draft was typed), then jumps to it.
+          addAfter: matchedQ => addQuestionAfterMatch(matchedQ, qInput.value, aInput.value, draft)
+        });
+      }
+
+      qInput.addEventListener("input", renderFuzzyHint);
+
+      const draft = { Done: false, ReviewLater: false, Duplicate: false, LessImportant: false, Starred: false };
+      const iconRow = document.createElement("div");
+      iconRow.className = "status-icon-row";
+
+      let doneT, reviewT;
+      doneT = createStatusIconToggle({
+        key: "done", icon: "fa-solid fa-check", label: "Done", initial: false,
+        onToggle: active => {
+          draft.Done = active;
+          if (active && reviewT.classList.contains("is-active")) {
+            reviewT.classList.remove("is-active");
+            reviewT.setAttribute("aria-pressed", "false");
+            draft.ReviewLater = false;
+          }
+        }
+      });
+      reviewT = createStatusIconToggle({
+        key: "review", icon: "fa-solid fa-clock", label: "Review Later", initial: false,
+        onToggle: active => {
+          draft.ReviewLater = active;
+          if (active && doneT.classList.contains("is-active")) {
+            doneT.classList.remove("is-active");
+            doneT.setAttribute("aria-pressed", "false");
+            draft.Done = false;
+          }
+        }
+      });
+      const dupT = createStatusIconToggle({ key: "duplicate", icon: "fa-solid fa-clone", label: "Duplicate", initial: false, onToggle: a => { draft.Duplicate = a; } });
+      const lessT = createStatusIconToggle({ key: "less", icon: "fa-solid fa-down-long", label: "Less Important", initial: false, onToggle: a => { draft.LessImportant = a; } });
+      const starT = createStatusIconToggle({ key: "star", icon: "fa-solid fa-star", label: "Starred", initial: false, onToggle: a => { draft.Starred = a; } });
+
+      [doneT, reviewT, dupT, lessT, starT].forEach(b => iconRow.appendChild(b));
+
+      const singleActions = document.createElement("div");
+      const saveSingleBtn = document.createElement("button");
+      saveSingleBtn.type = "button";
+      saveSingleBtn.className = "btn btn-sm btn-success me-2";
+      saveSingleBtn.textContent = "Save Question";
+      const cancelSingleBtn = document.createElement("button");
+      cancelSingleBtn.type = "button";
+      cancelSingleBtn.className = "btn btn-sm btn-outline-secondary";
+      cancelSingleBtn.textContent = "Cancel";
+      singleActions.appendChild(saveSingleBtn);
+      singleActions.appendChild(cancelSingleBtn);
+
+      singlePanel.appendChild(qInput);
+      singlePanel.appendChild(fuzzyHint);
+      singlePanel.appendChild(aInput);
+      singlePanel.appendChild(iconRow);
+      singlePanel.appendChild(singleActions);
+
+      function resetSingleForm() {
+        qInput.value = "";
+        aInput.value = "";
+        renderFuzzyHint();
+        [doneT, reviewT, dupT, lessT, starT].forEach(b => {
+          b.classList.remove("is-active");
+          b.setAttribute("aria-pressed", "false");
+        });
+        draft.Done = draft.ReviewLater = draft.Duplicate = draft.LessImportant = draft.Starred = false;
+      }
+
+      addBtn.addEventListener("click", () => {
+        bulkPanel.style.display = "none";
+        singlePanel.style.display = singlePanel.style.display === "none" ? "block" : "none";
+      });
+
+      cancelSingleBtn.addEventListener("click", () => {
+        resetSingleForm();
+        singlePanel.style.display = "none";
+      });
+
+      /* Shared save logic for both "Save Question" and "Save & Add". Returns
+         { ok:true, newQ } on success, or { ok:false, reason:"empty"|"duplicate" }. */
+      function trySaveQuestion(questionText, answerText) {
+        const text = (questionText || "").trim();
+        if (!text) return { ok: false, reason: "empty" };
+        if (questionExistsIn(questions, text)) return { ok: false, reason: "duplicate" };
+        const ord = getExistingOrder(subject, topic, level);
+        const newQ = {
+          Subject: subject, Topic: topic, Level: level,
+          Question: text, Answer: answerText || "",
+          Done: draft.Done, ReviewLater: draft.ReviewLater,
+          Duplicate: draft.Duplicate, LessImportant: draft.LessImportant, Starred: draft.Starred,
+          Order: questions.length,
+          SubjectOrder: ord.subjectOrder, TopicOrder: ord.topicOrder, LevelOrder: ord.levelOrder,
+          _id: uid("q")
+        };
+        questions.push(newQ);
+        rawData.push(newQ);
+
+        // Requirement: if this save was pre-filled via "Add anyway" from a specific matched
+        // question, position the new question directly after that one instead of at the end.
+        // Only ever applies to the FIRST save after a pre-fill — Save & Add's later prompts
+        // fall through to the normal end-of-list placement.
+        const insertAfterQid = singlePanel.dataset.insertAfterQid;
+        if (insertAfterQid) {
+          delete singlePanel.dataset.insertAfterQid;
+          if (questions.some(q => q._id === insertAfterQid)) {
+            const newOrderIds = idsWithInsertAfter(questions.map(q => q._id), newQ._id, insertAfterQid);
+            reorderLevelQuestions(subject, topic, level, newOrderIds);
+          }
+        }
+
+        persistCurrentProgress();
+        return { ok: true, newQ };
+      }
+
+      /* Shared by the "Save Question" button and the fuzzy-hint "Add anyway" icon (which fires
+         this with whatever is currently in the form, from the target question's accordion). */
+      function finishSingleSave(text, answer) {
+        const result = trySaveQuestion(text, answer);
+        if (!result.ok) {
+          alert(result.reason === "empty" ? "Question text cannot be empty." : "This question already exists in this accordion.");
+          return;
+        }
+        resetSingleForm();
+        singlePanel.style.display = "none";
+        pendingFocusQid = result.newQ._id; // stay on the question we just added instead of collapsing back
+        render();
+        showLevelAlert(subject, topic, level, "success", 'Added: "' + result.newQ.Question + '"', result.newQ._id);
+        flashHighlightItem(document.querySelector('[data-qid="' + result.newQ._id + '"]'));
+      }
+
+      saveSingleBtn.addEventListener("click", () => finishSingleSave(qInput.value, aInput.value));
+
+      /* Requirement: "Save & Add" — saves the current form, then keeps prompting via
+         window.prompt() for more Question/Answer pairs (same Subject/Topic/Level) until the
+         user cancels a prompt. */
+      const saveAddBtn = document.createElement("button");
+      saveAddBtn.type = "button";
+      saveAddBtn.className = "btn btn-sm btn-outline-success me-2";
+      saveAddBtn.textContent = "Save & Add";
+      singleActions.insertBefore(saveAddBtn, cancelSingleBtn);
+
+      saveAddBtn.addEventListener("click", () => {
+        const first = trySaveQuestion(qInput.value, aInput.value);
+        if (!first.ok) {
+          alert(first.reason === "empty" ? "Question text cannot be empty." : "This question already exists in this accordion.");
+          return;
+        }
+        let lastId = first.newQ._id;
+        let count = 1;
+        while (true) {
+          const nextQuestion = prompt('Next question for "' + subject + " / " + topic + " / " + level + '" (Cancel to stop):');
+          if (nextQuestion === null) break;
+          if (!nextQuestion.trim()) { alert("Question text cannot be empty — skipped."); continue; }
+          const nextAnswer = prompt("Answer for that question (HTML allowed, optional):") || "";
+          const result = trySaveQuestion(nextQuestion, nextAnswer);
+          if (!result.ok) {
+            alert('Already exists — skipped: "' + nextQuestion.trim() + '"');
+            continue;
+          }
+          lastId = result.newQ._id;
+          count++;
+        }
+        resetSingleForm();
+        singlePanel.style.display = "none";
+        pendingFocusQid = lastId;
+        render();
+        showLevelAlert(subject, topic, level, "success", count + " question(s) added — click to view the last one", lastId);
+      });
+
+      /* ---- Bulk add form (CSV pasted into a textarea) ---- */
+      const bulkPanel = document.createElement("div");
+      bulkPanel.className = "add-question-panel";
+      bulkPanel.style.display = "none";
+
+      const bulkHint = document.createElement("div");
+      bulkHint.className = "small text-muted mb-1";
+      bulkHint.textContent = "One question per row, tab-separated: Question [Tab] Answer. Paste directly from Excel/Google Sheets, or type the question then press Tab before the answer. No header row. Bulk-added questions start unmarked (Done / Review Later / Duplicate / Less Important / Starred all off).";
+
+      const bulkTextarea = document.createElement("textarea");
+      bulkTextarea.className = "form-control form-control-sm mb-2";
+      bulkTextarea.rows = 6;
+      bulkTextarea.placeholder = "What is a deadlock?\tA deadlock occurs when...\nWhat is polymorphism?\tPolymorphism lets...";
+
+      const bulkActions = document.createElement("div");
+      const saveBulkBtn = document.createElement("button");
+      saveBulkBtn.type = "button";
+      saveBulkBtn.className = "btn btn-sm btn-success me-2";
+      saveBulkBtn.textContent = "Add All";
+      const cancelBulkBtn = document.createElement("button");
+      cancelBulkBtn.type = "button";
+      cancelBulkBtn.className = "btn btn-sm btn-outline-secondary";
+      cancelBulkBtn.textContent = "Cancel";
+      bulkActions.appendChild(saveBulkBtn);
+      bulkActions.appendChild(cancelBulkBtn);
+
+      bulkPanel.appendChild(bulkHint);
+      bulkPanel.appendChild(bulkTextarea);
+      bulkPanel.appendChild(bulkActions);
+
+      bulkBtn.addEventListener("click", () => {
+        singlePanel.style.display = "none";
+        bulkPanel.style.display = bulkPanel.style.display === "none" ? "block" : "none";
+      });
+
+      cancelBulkBtn.addEventListener("click", () => {
+        bulkTextarea.value = "";
+        bulkPanel.style.display = "none";
+      });
+
+      saveBulkBtn.addEventListener("click", () => {
+        const rawText = bulkTextarea.value.trim();
+        if (!rawText) {
+          alert("Paste at least one CSV row first.");
+          return;
+        }
+        const parsed = Papa.parse(rawText, { skipEmptyLines: true, delimiter: "\t" });
+        if (parsed.errors && parsed.errors.length) {
+          alert("Could not parse that text: " + parsed.errors[0].message);
+          return;
+        }
+        let nextOrder = questions.length;
+        let added = 0;
+        let lastAddedId = null;
+        const ord = getExistingOrder(subject, topic, level);
+        parsed.data.forEach(row => {
+          const questionText = (row[0] || "").trim();
+          if (!questionText) return;
+          const newQ = {
+            Subject: subject, Topic: topic, Level: level,
+            Question: questionText, Answer: row[1] || "",
+            Done: false, ReviewLater: false, Duplicate: false, LessImportant: false, Starred: false,
+            Order: nextOrder++,
+            SubjectOrder: ord.subjectOrder, TopicOrder: ord.topicOrder, LevelOrder: ord.levelOrder,
+            _id: uid("q")
+          };
+          questions.push(newQ);
+          rawData.push(newQ);
+          lastAddedId = newQ._id;
+          added++;
+        });
+        if (!added) {
+          alert("No valid rows found (first column must be non-empty Question text).");
+          return;
+        }
+        persistCurrentProgress();
+        bulkTextarea.value = "";
+        bulkPanel.style.display = "none";
+        pendingFocusQid = lastAddedId; // stay on the Level, land on the last question added
+        render();
+        showLevelAlert(subject, topic, level, "success", added + " question(s) added — click to view the last one", lastAddedId);
+      });
+
+      wrap.appendChild(singlePanel);
+      wrap.appendChild(bulkPanel);
+      return wrap;
+    }
+
+    function createLevel(subject, topic, level, questions, parentId, isTarget) {
+      const itemId = uid("level");
+      const item = document.createElement("div");
+      item.className = "accordion-item tree-item";
+      item.dataset.level = level;
+
+      const header = document.createElement("h2");
+      header.className = "accordion-header";
+
+      const dragHandle = document.createElement("span");
+      dragHandle.className = "drag-handle";
+      dragHandle.title = "Drag to reorder";
+      dragHandle.textContent = "⠿";
+
+      const button = document.createElement("button");
+      button.className = "accordion-button collapsed";
+      button.type = "button";
+      button.setAttribute("data-bs-toggle", "collapse");
+      button.setAttribute("data-bs-target", "#" + itemId);
+      button.textContent = level;
+
+      const stats = computeStats(questions);
+      const badgeHolder = document.createElement("span");
+      badgeHolder.className = "badge-holder";
+      badgeHolder.appendChild(createBadges(stats));
+      button.appendChild(badgeHolder);
+      badgeRefs["L|" + subject + "|" + topic + "|" + level] = { holder: badgeHolder, node: questions };
+
+      const editLevelBtn = document.createElement("span");
+      editLevelBtn.className = "tree-edit-btn";
+      editLevelBtn.title = "Rename Level";
+      editLevelBtn.textContent = "✎";
+      editLevelBtn.addEventListener("click", () => promptRename("Level", level, newName => renameLevel(subject, topic, level, newName)));
+      const copyLevelBtn = createCopyQuestionsButton(() => questions, "level");
+
+      header.appendChild(dragHandle);
+      header.appendChild(button);
+      header.appendChild(editLevelBtn);
+      header.appendChild(copyLevelBtn);
+      item.appendChild(header);
+
+      const collapse = document.createElement("div");
+      collapse.id = itemId;
+      collapse.className = "accordion-collapse collapse";
+      collapse.setAttribute("data-bs-parent", "#" + parentId);
+
+      const body = document.createElement("div");
+      body.className = "accordion-body";
+
+      body.appendChild(createAddQuestionPanel(subject, topic, level, questions));
+
+      const levelAlertHolder = document.createElement("div");
+      levelAlertHolder.className = "level-alert-holder";
+      levelAlertHolder.dataset.levelAlertKey = levelAlertKey(subject, topic, level);
+      body.appendChild(levelAlertHolder);
+
+      const questionAccordionId = uid("qAcc");
+      const questionAccordion = document.createElement("div");
+      questionAccordion.className = "accordion";
+      questionAccordion.id = questionAccordionId;
+
+      questions.forEach((q, idx) => {
+        // Auto-expand only ever reaches Subject/Topic/Level — the question's own answer body
+        // is never auto-opened, so isTarget is always false here.
+        const qItem = createQuestion(q, questionAccordionId, false);
+        const idxSpan = qItem.querySelector(":scope > .accordion-header .q-index");
+        if (idxSpan) idxSpan.textContent = (idx + 1) + ".";
+        questionAccordion.appendChild(qItem);
+      });
+
+      body.appendChild(questionAccordion);
+      collapse.appendChild(body);
+      item.appendChild(collapse);
+
+      if (isTarget) expandItem(button, collapse);
+
+      // drag-to-reorder: only the ⠿ handle initiates a drag; dropping rewrites Order and persists it
+      Sortable.create(questionAccordion, {
+        handle: ".drag-handle",
+        animation: 150,
+        ghostClass: "sortable-ghost",
+        chosenClass: "sortable-chosen",
+        onEnd: function (evt) {
+          const newOrderIds = Array.from(questionAccordion.children).map(el => el.dataset.qid);
+          reorderLevelQuestions(subject, topic, level, newOrderIds);
+          renumberQuestionAccordion(questionAccordion);
+          flashHighlightItem(evt.item); // sustained flash highlight (with dismiss) for the dropped question
+        }
+      });
+
+      return item;
+    }
+
+    /* Reusable icon-toggle button (replaces checkbox+label status controls everywhere).
+       opts: { key, icon (Font Awesome class string, e.g. "fa-solid fa-check"), label, initial, onToggle(isActiveNow) } */
+    function createStatusIconToggle(opts) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "status-icon-btn icon-" + opts.key + (opts.compact ? " compact" : "") + (opts.initial ? " is-active" : "");
+      btn.title = opts.label;
+      btn.setAttribute("aria-label", opts.label);
+      btn.setAttribute("aria-pressed", opts.initial ? "true" : "false");
+
+      const glyph = document.createElement("span");
+      glyph.className = "icon-glyph";
+      const glyphIcon = document.createElement("i");
+      glyphIcon.className = opts.icon;
+      glyph.appendChild(glyphIcon);
+      btn.appendChild(glyph);
+
+      if (!opts.compact) {
+        const cap = document.createElement("span");
+        cap.className = "icon-label";
+        cap.textContent = opts.label;
+        btn.appendChild(cap);
+      }
+
+      btn.addEventListener("click", () => {
+        const active = !btn.classList.contains("is-active");
+        btn.classList.toggle("is-active", active);
+        btn.setAttribute("aria-pressed", String(active));
+        opts.onToggle(active, btn);
+      });
+
+      return btn;
+    }
+
+    function createQuestion(q, parentId, isTarget) {
+      const itemId = uid("question");
+      const item = document.createElement("div");
+      item.className = "accordion-item q-item";
+      item.dataset.qid = q._id;
+      applyStatusClass(item, q);
+
+      const header = document.createElement("h2");
+      header.className = "accordion-header d-flex align-items-stretch";
+
+      const dragHandle = document.createElement("span");
+      dragHandle.className = "drag-handle";
+      dragHandle.title = "Drag to reorder";
+      dragHandle.textContent = "⠿";
+
+      const button = document.createElement("button");
+      button.className = "accordion-button collapsed";
+      button.type = "button";
+      button.setAttribute("data-bs-toggle", "collapse");
+      button.setAttribute("data-bs-target", "#" + itemId);
+
+      const indexSpan = document.createElement("span");
+      indexSpan.className = "q-index";
+      button.appendChild(indexSpan);
+
+      const warnIcon = document.createElement("span");
+      // warnIcon.className = "ms-2";
+      warnIcon.title = "No answer provided yet";
+      warnIcon.textContent = "⚠️";
+      warnIcon.style.display = (q.Answer && q.Answer.trim()) ? "none" : "inline";
+      button.appendChild(warnIcon);
+
+      const qText = document.createElement("span");
+      qText.textContent = q.Question;
+      button.appendChild(qText);
+
+      /* ---- Status icon toggles: compact, icon-only, inline next to the drag handle ---- */
+      const controlsStart = document.createElement("div");
+      controlsStart.className = "status-icon-row compact";
+
+      const controlsEnd = document.createElement("div");
+      controlsEnd.className = "status-icon-row compact";
+
+      const doneBtn = createStatusIconToggle({
+        key: "done", icon: "fa-solid fa-check", label: "Done", initial: !!q.Done, compact: true,
+        onToggle: active => {
+          q.Done = active;
+          if (q.Done && reviewBtn.classList.contains("is-active")) {
+            reviewBtn.classList.remove("is-active");
+            reviewBtn.setAttribute("aria-pressed", "false");
+            q.ReviewLater = false;
+          }
+          applyStatusClass(item, q);
+          syncBadges(q);
+          persistCurrentProgress();
+        }
+      });
+
+      const reviewBtn = createStatusIconToggle({
+        key: "review", icon: "fa-solid fa-clock", label: "Review Later", initial: !!q.ReviewLater, compact: true,
+        onToggle: active => {
+          q.ReviewLater = active;
+          if (q.ReviewLater && doneBtn.classList.contains("is-active")) {
+            doneBtn.classList.remove("is-active");
+            doneBtn.setAttribute("aria-pressed", "false");
+            q.Done = false;
+          }
+          applyStatusClass(item, q);
+          syncBadges(q);
+          persistCurrentProgress();
+        }
+      });
+
+      const dupBtn = createStatusIconToggle({
+        key: "duplicate", icon: "fa-solid fa-clone", label: "Duplicate", initial: !!q.Duplicate, compact: true,
+        onToggle: (active, btn) => {
+          if (active && q.Answer && q.Answer.trim()) {
+            const proceed = confirm("This question already has an answer filled in. Marking it Duplicate excludes it from the exported Progress CSV, so it could effectively be lost. Continue?");
+            if (!proceed) {
+              btn.classList.remove("is-active");
+              btn.setAttribute("aria-pressed", "false");
+              return;
+            }
+          }
+          q.Duplicate = active;
+          persistCurrentProgress();
+        }
+      });
+
+      const lessBtn = createStatusIconToggle({
+        key: "less", icon: "fa-solid fa-down-long", label: "Less Important", initial: !!q.LessImportant, compact: true,
+        onToggle: active => {
+          q.LessImportant = active;
+          syncBadges(q);
+          persistCurrentProgress();
+        }
+      });
+
+      const starBtn = createStatusIconToggle({
+        key: "star", icon: "fa-solid fa-star", label: "Starred", initial: !!q.Starred, compact: true,
+        onToggle: active => {
+          q.Starred = active;
+          updateStarredBadge();
+          persistCurrentProgress();
+          // Re-sort this Level so Starred stays first, then jump back to the question
+          // (its index number will have changed) and flash it so the move is obvious.
+          grouped = groupData(rawData);
+          pendingFocusQid = q._id;
+          render();
+          highlightMovedQuestion(q._id);
+        }
+      });
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.className = "status-icon-btn icon-delete compact";
+      deleteBtn.title = "Delete question";
+      deleteBtn.setAttribute("aria-label", "Delete question");
+      const delGlyph = document.createElement("span");
+      delGlyph.className = "icon-glyph";
+      const delGlyphIcon = document.createElement("i");
+      delGlyphIcon.className = "fa-solid fa-trash";
+      delGlyph.appendChild(delGlyphIcon);
+      deleteBtn.appendChild(delGlyph);
+      deleteBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const hasAnswer = !!(q.Answer && q.Answer.trim());
+        if (hasAnswer) {
+          const msg = "This question already has an answer filled in. Delete it permanently anyway?";
+          if (!confirm(msg)) return;
+        }
+        const qText = q.Question;
+        const subj = q.Subject, top = q.Topic, lvl = q.Level;
+        deleteQuestionById(q._id);
+        const levelItem = expandLevelChain(subj, top, lvl);
+        showLevelAlert(subj, top, lvl, "danger", 'Deleted: "' + qText + '"');
+        updateHeaderBreadcrumb();
+        if (levelItem) {
+          const holder = levelItem.querySelector(".level-alert-holder");
+          requestAnimationFrame(() => {
+            (holder || levelItem).scrollIntoView({ behavior: "smooth", block: "center" });
+          });
+        }
+      });
+
+      controlsStart.appendChild(starBtn);
+
+      const searchBtn = document.createElement("button");
+      searchBtn.type = "button";
+      searchBtn.className = "status-icon-btn icon-search compact";
+      searchBtn.title = "Copy question (with Subject & Topic) and search on Google";
+      searchBtn.setAttribute("aria-label", "Copy and search question on Google");
+      const searchGlyph = document.createElement("span");
+      searchGlyph.className = "icon-glyph";
+      const searchGlyphIcon = document.createElement("i");
+      searchGlyphIcon.className = "fa-solid fa-magnifying-glass";
+      searchGlyph.appendChild(searchGlyphIcon);
+      searchBtn.appendChild(searchGlyph);
+      searchBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        copyAndSearchQuestion(q);
+      });
+
+      // Requirement: sleeker header — group the "editing status" toggles into one pill-shaped
+      // cluster, visually separated from the destructive Delete action by a divider, instead of
+      // five icons crammed shoulder-to-shoulder with equal visual weight.
+      const statusCluster = document.createElement("div");
+      statusCluster.className = "status-cluster";
+      statusCluster.appendChild(doneBtn);
+      statusCluster.appendChild(reviewBtn);
+      statusCluster.appendChild(dupBtn);
+      statusCluster.appendChild(lessBtn);
+      controlsEnd.appendChild(searchBtn);
+      controlsEnd.appendChild(statusCluster);
+      controlsEnd.appendChild(deleteBtn);
+
+      header.appendChild(dragHandle);
+      header.appendChild(controlsStart);
+      header.appendChild(button);
+      header.appendChild(controlsEnd);
+      item.appendChild(header);
+
+      const collapse = document.createElement("div");
+      collapse.id = itemId;
+      collapse.className = "accordion-collapse collapse";
+      collapse.setAttribute("data-bs-parent", "#" + parentId);
+
+      const body = document.createElement("div");
+      body.className = "accordion-body answer-body";
+
+      /* ---- Row 2: edit/move actions ---- */
+      const actionsRow = document.createElement("div");
+      actionsRow.className = "status-controls";
+
+      const editQuestionBtn = document.createElement("button");
+      editQuestionBtn.type = "button";
+      editQuestionBtn.className = "btn btn-sm btn-outline-secondary";
+      editQuestionBtn.textContent = "Edit Question";
+      actionsRow.appendChild(editQuestionBtn);
+
+      const editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.className = "btn btn-sm btn-outline-primary";
+      editBtn.textContent = q.Answer && q.Answer.trim() ? "Edit Answer" : "Add Answer";
+      actionsRow.appendChild(editBtn);
+
+      const moveUpBtn = document.createElement("button");
+      moveUpBtn.type = "button";
+      moveUpBtn.className = "btn btn-sm btn-outline-dark";
+      moveUpBtn.title = "Move up one position";
+      moveUpBtn.textContent = "↑ Up";
+      moveUpBtn.addEventListener("click", () => moveQuestionByStep(q, "up"));
+      actionsRow.appendChild(moveUpBtn);
+
+      const moveDownBtn = document.createElement("button");
+      moveDownBtn.type = "button";
+      moveDownBtn.className = "btn btn-sm btn-outline-dark";
+      moveDownBtn.title = "Move down one position";
+      moveDownBtn.textContent = "↓ Down";
+      moveDownBtn.addEventListener("click", () => moveQuestionByStep(q, "down"));
+      actionsRow.appendChild(moveDownBtn);
+
+      const moveTopBtn = document.createElement("button");
+      moveTopBtn.type = "button";
+      moveTopBtn.className = "btn btn-sm btn-outline-dark";
+      moveTopBtn.title = "Move to top of this Level";
+      moveTopBtn.textContent = "⇈ Top";
+      moveTopBtn.addEventListener("click", () => moveQuestionToEdge(q, "top"));
+      actionsRow.appendChild(moveTopBtn);
+
+      const moveBottomBtn = document.createElement("button");
+      moveBottomBtn.type = "button";
+      moveBottomBtn.className = "btn btn-sm btn-outline-dark";
+      moveBottomBtn.title = "Move to bottom of this Level";
+      moveBottomBtn.textContent = "⇊ Bottom";
+      moveBottomBtn.addEventListener("click", () => moveQuestionToEdge(q, "bottom"));
+      actionsRow.appendChild(moveBottomBtn);
+
+      const moveBtn = document.createElement("button");
+      moveBtn.type = "button";
+      moveBtn.className = "btn btn-sm btn-outline-dark ms-auto";
+      moveBtn.textContent = "Change Subject/Topic/Level";
+      actionsRow.appendChild(moveBtn);
+
+      /* ---- Answer view/edit ---- */
+      const answerContent = document.createElement("div");
+      answerContent.innerHTML = q.Answer; // trusted HTML answer content from CSV, rendered as-is
+
+      const editWrapper = document.createElement("div");
+      editWrapper.style.display = "none";
+
+      const textarea = document.createElement("textarea");
+      textarea.className = "form-control mb-2";
+      textarea.rows = 6;
+      textarea.placeholder = "HTML answer content...";
+
+      const editActions = document.createElement("div");
+      editActions.className = "mb-2";
+
+      const saveBtn = document.createElement("button");
+      saveBtn.type = "button";
+      saveBtn.className = "btn btn-sm btn-success me-2";
+      saveBtn.textContent = "Save";
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "btn btn-sm btn-outline-secondary";
+      cancelBtn.textContent = "Cancel";
+
+      editActions.appendChild(saveBtn);
+      editActions.appendChild(cancelBtn);
+      editWrapper.appendChild(textarea);
+      editWrapper.appendChild(editActions);
+
+      function enterEditMode() {
+        textarea.value = q.Answer || "";
+        answerContent.style.display = "none";
+        editBtn.style.display = "none";
+        editWrapper.style.display = "block";
+        textarea.focus();
+      }
+
+      function exitEditMode() {
+        editWrapper.style.display = "none";
+        answerContent.style.display = "";
+        editBtn.style.display = "";
+      }
+
+      editBtn.addEventListener("click", enterEditMode);
+
+      saveBtn.addEventListener("click", () => {
+        q.Answer = textarea.value;
+        answerContent.innerHTML = q.Answer;
+        editBtn.textContent = q.Answer && q.Answer.trim() ? "Edit Answer" : "Add Answer";
+        warnIcon.style.display = (q.Answer && q.Answer.trim()) ? "none" : "inline";
+        persistCurrentProgress();
+        exitEditMode();
+      });
+
+      cancelBtn.addEventListener("click", exitEditMode);
+
+      /* ---- Edit Question text ---- */
+      const questionEditWrapper = document.createElement("div");
+      questionEditWrapper.style.display = "none";
+      questionEditWrapper.className = "mb-2";
+
+      const questionInput = document.createElement("textarea");
+      questionInput.className = "form-control mb-2";
+      questionInput.rows = 2;
+
+      const questionEditActions = document.createElement("div");
+      const qSaveBtn = document.createElement("button");
+      qSaveBtn.type = "button";
+      qSaveBtn.className = "btn btn-sm btn-success me-2";
+      qSaveBtn.textContent = "Save";
+      const qCancelBtn = document.createElement("button");
+      qCancelBtn.type = "button";
+      qCancelBtn.className = "btn btn-sm btn-outline-secondary";
+      qCancelBtn.textContent = "Cancel";
+      questionEditActions.appendChild(qSaveBtn);
+      questionEditActions.appendChild(qCancelBtn);
+      questionEditWrapper.appendChild(questionInput);
+      questionEditWrapper.appendChild(questionEditActions);
+
+      editQuestionBtn.addEventListener("click", () => {
+        questionInput.value = q.Question;
+        questionEditWrapper.style.display = "block";
+        questionInput.focus();
+      });
+
+      qSaveBtn.addEventListener("click", () => {
+        const trimmed = questionInput.value.trim();
+        if (!trimmed) {
+          alert("Question text cannot be empty.");
+          return;
+        }
+        q.Question = trimmed;
+        qText.textContent = trimmed;
+        persistCurrentProgress();
+        questionEditWrapper.style.display = "none";
+      });
+
+      qCancelBtn.addEventListener("click", () => {
+        questionEditWrapper.style.display = "none";
+      });
+
+      /* ---- Move Subject/Topic/Level ---- */
+      const moveWrapper = document.createElement("div");
+      moveWrapper.style.display = "none";
+      moveWrapper.className = "mb-2 p-2 border rounded";
+
+      const NEW_VALUE = "__new__";
+
+      function labeledCascadingSelect(labelText) {
+        const wrap = document.createElement("div");
+        wrap.className = "mb-2";
+        const lbl = document.createElement("label");
+        lbl.className = "form-label small fw-bold";
+        lbl.textContent = labelText;
+        const select = document.createElement("select");
+        select.className = "form-select form-select-sm mb-1";
+        const customInput = document.createElement("input");
+        customInput.type = "text";
+        customInput.className = "form-control form-control-sm";
+        customInput.placeholder = "New " + labelText.toLowerCase() + " name";
+        customInput.style.display = "none";
+        wrap.appendChild(lbl);
+        wrap.appendChild(select);
+        wrap.appendChild(customInput);
+
+        function fillOptions(values, selectedValue) {
+          select.textContent = "";
+          values.forEach(v => {
+            const opt = document.createElement("option");
+            opt.value = v;
+            opt.textContent = v;
+            select.appendChild(opt);
+          });
+          const newOpt = document.createElement("option");
+          newOpt.value = NEW_VALUE;
+          newOpt.textContent = "+ New " + labelText + "...";
+          select.appendChild(newOpt);
+
+          if (values.includes(selectedValue)) {
+            select.value = selectedValue;
+            customInput.style.display = "none";
+          } else {
+            select.value = NEW_VALUE;
+            customInput.value = selectedValue || "";
+            customInput.style.display = "block";
+          }
+        }
+
+        select.addEventListener("change", () => {
+          customInput.style.display = select.value === NEW_VALUE ? "block" : "none";
+          if (select.value === NEW_VALUE) customInput.focus();
+        });
+
+        function getValue() {
+          return select.value === NEW_VALUE ? customInput.value.trim() : select.value;
+        }
+
+        return { wrap, select, customInput, fillOptions, getValue };
+      }
+
+      const subjectField = labeledCascadingSelect("Subject");
+      const topicField = labeledCascadingSelect("Topic");
+      const levelField = labeledCascadingSelect("Level");
+
+      function refreshTopicOptions(selectedTopic) {
+        const subj = subjectField.getValue();
+        const topics = [...new Set(rawData.filter(r => r.Subject === subj).map(r => r.Topic))].sort();
+        topicField.fillOptions(topics, selectedTopic);
+      }
+
+      function refreshLevelOptions(selectedLevel) {
+        const subj = subjectField.getValue();
+        const top = topicField.getValue();
+        const levels = [...new Set(rawData.filter(r => r.Subject === subj && r.Topic === top).map(r => r.Level))].sort();
+        levelField.fillOptions(levels, selectedLevel);
+      }
+
+      subjectField.select.addEventListener("change", () => { refreshTopicOptions(null); refreshLevelOptions(null); });
+      subjectField.customInput.addEventListener("input", () => { refreshTopicOptions(null); refreshLevelOptions(null); });
+      topicField.select.addEventListener("change", () => refreshLevelOptions(null));
+      topicField.customInput.addEventListener("input", () => refreshLevelOptions(null));
+
+      function refreshMoveFields() {
+        const subjects = [...new Set(rawData.map(r => r.Subject))].sort();
+        subjectField.fillOptions(subjects, q.Subject);
+        refreshTopicOptions(q.Topic);
+        refreshLevelOptions(q.Level);
+      }
+
+      const moveActions = document.createElement("div");
+      const moveSaveBtn = document.createElement("button");
+      moveSaveBtn.type = "button";
+      moveSaveBtn.className = "btn btn-sm btn-success me-2";
+      moveSaveBtn.textContent = "Save";
+      const moveCancelBtn = document.createElement("button");
+      moveCancelBtn.type = "button";
+      moveCancelBtn.className = "btn btn-sm btn-outline-secondary";
+      moveCancelBtn.textContent = "Cancel";
+      moveActions.appendChild(moveSaveBtn);
+      moveActions.appendChild(moveCancelBtn);
+
+      moveWrapper.appendChild(subjectField.wrap);
+      moveWrapper.appendChild(topicField.wrap);
+      moveWrapper.appendChild(levelField.wrap);
+      moveWrapper.appendChild(moveActions);
+
+      moveBtn.addEventListener("click", () => {
+        refreshMoveFields();
+        moveWrapper.style.display = "block";
+      });
+
+      moveSaveBtn.addEventListener("click", () => {
+        const newSubject = subjectField.getValue();
+        const newTopic = topicField.getValue();
+        const newLevel = levelField.getValue();
+        if (!newSubject || !newTopic || !newLevel) {
+          alert("Subject, Topic, and Level cannot be empty.");
+          return;
+        }
+        const ord = getExistingOrder(newSubject, newTopic, newLevel);
+        q.Subject = newSubject;
+        q.Topic = newTopic;
+        q.Level = newLevel;
+        q.SubjectOrder = ord.subjectOrder;
+        q.TopicOrder = ord.topicOrder;
+        q.LevelOrder = ord.levelOrder;
+        grouped = groupData(rawData);
+        persistCurrentProgress();
+        moveWrapper.style.display = "none";
+        refreshFilterOptions();
+        pendingFocusQid = q._id; // jump to its new location in the tree
+        render(); // question moved to a different tree node, must rebuild
+      });
+
+      moveCancelBtn.addEventListener("click", () => {
+        moveWrapper.style.display = "none";
+      });
+
+      body.appendChild(answerContent);
+      body.appendChild(actionsRow);
+      body.appendChild(questionEditWrapper);
+      body.appendChild(moveWrapper);
+      body.appendChild(editWrapper);
+      collapse.appendChild(body);
+      item.appendChild(collapse);
+
+      if (isTarget) {
+        expandItem(button, collapse);
+        scrollTargetEl = item;
+      }
+
+      return item;
+    }
+
+    function applyStatusClass(item, q) {
+      item.classList.remove("status-done", "status-review");
+      if (q.Done) item.classList.add("status-done");
+      else if (q.ReviewLater) item.classList.add("status-review");
+    }
+
+    /* ============ Add New Subject / Topic / Level ============
+       Global panel (lives above the tree, not inside a specific Level accordion) that lets the
+       user create a brand-new Subject, Topic, and/or Level — along with its first question — by
+       picking "+ New ..." at any of the three cascading dropdowns, or reuse existing values to
+       just add another question under them. */
+    (function setupAddNewPanel() {
+      const NEW_VALUE = "__new__";
+      const toggleBtn = document.getElementById("addNewToggleBtn");
+      const panel = document.getElementById("addNewPanel");
+      let built = false;
+
+      function cascadingField(labelText) {
+        const wrap = document.createElement("div");
+        wrap.className = "mb-2";
+        const lbl = document.createElement("label");
+        lbl.className = "form-label small fw-bold";
+        lbl.textContent = labelText;
+        const select = document.createElement("select");
+        select.className = "form-select form-select-sm mb-1";
+        const customInput = document.createElement("input");
+        customInput.type = "text";
+        customInput.className = "form-control form-control-sm";
+        customInput.placeholder = "New " + labelText.toLowerCase() + " name";
+        wrap.appendChild(lbl);
+        wrap.appendChild(select);
+        wrap.appendChild(customInput);
+
+        function fillOptions(values) {
+          const prevCustom = customInput.value;
+          select.textContent = "";
+          const placeholderOpt = document.createElement("option");
+          placeholderOpt.value = "";
+          placeholderOpt.textContent = values.length ? "Select existing " + labelText.toLowerCase() + "..." : "(none yet)";
+          select.appendChild(placeholderOpt);
+          values.forEach(v => {
+            const opt = document.createElement("option");
+            opt.value = v;
+            opt.textContent = v;
+            select.appendChild(opt);
+          });
+          const newOpt = document.createElement("option");
+          newOpt.value = NEW_VALUE;
+          newOpt.textContent = "+ New " + labelText + "...";
+          select.appendChild(newOpt);
+
+          select.value = NEW_VALUE;
+          customInput.value = prevCustom;
+          customInput.style.display = "block";
+        }
+
+        select.addEventListener("change", () => {
+          if (select.value === NEW_VALUE) {
+            customInput.style.display = "block";
+            customInput.value = "";
+            customInput.focus();
+          } else {
+            customInput.style.display = "none";
+            customInput.value = "";
+          }
+          onChange();
+        });
+
+        function getValue() {
+          return select.value === NEW_VALUE ? customInput.value.trim() : select.value;
+        }
+
+        let onChange = () => { };
+
+        return { wrap, select, customInput, fillOptions, getValue, onChangeSet: fn => { onChange = fn; } };
+      }
+
+      const subjectField = cascadingField("Subject");
+      const topicField = cascadingField("Topic");
+      const levelField = cascadingField("Level");
+
+      function refreshTopics() {
+        const subj = subjectField.getValue();
+        const topics = subj ? [...new Set(rawData.filter(r => r.Subject === subj).map(r => r.Topic))].sort() : [];
+        topicField.fillOptions(topics);
+      }
+
+      function refreshLevels() {
+        const subj = subjectField.getValue();
+        const top = topicField.getValue();
+        const levels = (subj && top) ? [...new Set(rawData.filter(r => r.Subject === subj && r.Topic === top).map(r => r.Level))].sort() : [];
+        levelField.fillOptions(levels);
+      }
+
+      subjectField.onChangeSet(() => { refreshTopics(); refreshLevels(); });
+      topicField.onChangeSet(() => { refreshLevels(); });
+
+      const qInput = document.createElement("textarea");
+      qInput.className = "form-control form-control-sm mb-2";
+      qInput.rows = 2;
+      qInput.placeholder = "Question text...";
+
+      /* Requirement: fuzzy-duplicate hints — as the user types, surface existing questions
+         (anywhere in the dataset) that share a significant word; clicking one jumps to it. */
+      const fuzzyHint = document.createElement("div");
+      fuzzyHint.className = "small text-muted mb-2";
+      fuzzyHint.style.display = "none";
+
+      const aInput = document.createElement("textarea");
+      aInput.className = "form-control form-control-sm mb-2";
+      aInput.rows = 3;
+      aInput.placeholder = "Answer (HTML allowed)...";
+
+      function renderFuzzyHint() {
+        populateFuzzyHint(fuzzyHint, qInput.value, {
+          jumpBack: () => {
+            requestAnimationFrame(() => panel.scrollIntoView({ behavior: "smooth", block: "center" }));
+            qInput.focus();
+            flashHighlightItem(panel);
+          },
+          // Requirement: "Add anyway" does NOT save automatically, and doesn't just bounce back
+          // to this draft either — it opens and pre-fills the TARGET question's own Level's add
+          // panel with this draft, so the user saves it right alongside the question they just
+          // reviewed (see openLevelAddPanelPrefilled).
+          addAnyway: targetItem => {
+            const openedWrap = openLevelAddPanelPrefilled(targetItem, qInput.value, aInput.value);
+            if (!openedWrap) return;
+            requestAnimationFrame(() => openedWrap.scrollIntoView({ behavior: "smooth", block: "center" }));
+            flashHighlightItem(openedWrap);
+          },
+          // Requirement: "Add Question After" auto-saves the draft directly after the matched
+          // question, in ITS Level (not this panel where the draft was typed), then jumps to it.
+          addAfter: matchedQ => addQuestionAfterMatch(matchedQ, qInput.value, aInput.value, draft)
+        });
+      }
+
+      qInput.addEventListener("input", renderFuzzyHint);
+
+      const draft = { Done: false, ReviewLater: false, Duplicate: false, LessImportant: false, Starred: false };
+      const iconRow = document.createElement("div");
+      iconRow.className = "status-icon-row";
+
+      let doneT, reviewT;
+      doneT = createStatusIconToggle({
+        key: "done", icon: "fa-solid fa-check", label: "Done", initial: false,
+        onToggle: active => {
+          draft.Done = active;
+          if (active && reviewT.classList.contains("is-active")) {
+            reviewT.classList.remove("is-active");
+            reviewT.setAttribute("aria-pressed", "false");
+            draft.ReviewLater = false;
+          }
+        }
+      });
+      reviewT = createStatusIconToggle({
+        key: "review", icon: "fa-solid fa-clock", label: "Review Later", initial: false,
+        onToggle: active => {
+          draft.ReviewLater = active;
+          if (active && doneT.classList.contains("is-active")) {
+            doneT.classList.remove("is-active");
+            doneT.setAttribute("aria-pressed", "false");
+            draft.Done = false;
+          }
+        }
+      });
+      const dupT = createStatusIconToggle({ key: "duplicate", icon: "fa-solid fa-clone", label: "Duplicate", initial: false, onToggle: a => { draft.Duplicate = a; } });
+      const lessT = createStatusIconToggle({ key: "less", icon: "fa-solid fa-down-long", label: "Less Important", initial: false, onToggle: a => { draft.LessImportant = a; } });
+      const starT = createStatusIconToggle({ key: "star", icon: "fa-solid fa-star", label: "Starred", initial: false, onToggle: a => { draft.Starred = a; } });
+      [doneT, reviewT, dupT, lessT, starT].forEach(b => iconRow.appendChild(b));
+
+      const actions = document.createElement("div");
+      const saveBtn = document.createElement("button");
+      saveBtn.type = "button";
+      saveBtn.className = "btn btn-sm btn-success me-2";
+      saveBtn.textContent = "Save New Question";
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "btn btn-sm btn-outline-secondary";
+      cancelBtn.textContent = "Cancel";
+      actions.appendChild(saveBtn);
+      actions.appendChild(cancelBtn);
+
+      function resetForm() {
+        [subjectField, topicField, levelField].forEach(f => { f.customInput.value = ""; });
+        refreshFieldsFromScratch();
+        qInput.value = "";
+        aInput.value = "";
+        renderFuzzyHint();
+        [doneT, reviewT, dupT, lessT, starT].forEach(b => {
+          b.classList.remove("is-active");
+          b.setAttribute("aria-pressed", "false");
+        });
+        draft.Done = draft.ReviewLater = draft.Duplicate = draft.LessImportant = draft.Starred = false;
+      }
+
+      function refreshFieldsFromScratch() {
+        const subjects = [...new Set(rawData.map(r => r.Subject))].sort();
+        subjectField.fillOptions(subjects);
+        refreshTopics();
+        refreshLevels();
+      }
+
+      toggleBtn.addEventListener("click", () => {
+        if (!built) {
+          panel.appendChild(subjectField.wrap);
+          panel.appendChild(topicField.wrap);
+          panel.appendChild(levelField.wrap);
+          panel.appendChild(qInput);
+          panel.appendChild(fuzzyHint);
+          panel.appendChild(aInput);
+          panel.appendChild(iconRow);
+          panel.appendChild(actions);
+          built = true;
+        }
+        if (panel.style.display === "none") {
+          refreshFieldsFromScratch();
+          panel.style.display = "block";
+        } else {
+          panel.style.display = "none";
+        }
+      });
+
+      cancelBtn.addEventListener("click", () => {
+        resetForm();
+        panel.style.display = "none";
+      });
+
+      /* Shared by the "Save New Question" button and the fuzzy-hint "Add anyway" icon. */
+      function finishNewQuestionSave() {
+        const subject = subjectField.getValue();
+        const topic = topicField.getValue();
+        const level = levelField.getValue();
+        const questionText = qInput.value.trim();
+        if (!subject || !topic || !level) {
+          alert("Subject, Topic, and Level cannot be empty.");
+          return;
+        }
+        if (!questionText) {
+          alert("Question text cannot be empty.");
+          return;
+        }
+        const siblings = rawData.filter(r => r.Subject === subject && r.Topic === topic && r.Level === level);
+        if (questionExistsIn(siblings, questionText)) {
+          alert("This question already exists under " + subject + " / " + topic + " / " + level + ".");
+          return;
+        }
+        const siblingCount = siblings.length;
+        const ord = getExistingOrder(subject, topic, level);
+        const newQ = {
+          Subject: subject, Topic: topic, Level: level,
+          Question: questionText, Answer: aInput.value || "",
+          Done: draft.Done, ReviewLater: draft.ReviewLater,
+          Duplicate: draft.Duplicate, LessImportant: draft.LessImportant, Starred: draft.Starred,
+          Order: siblingCount,
+          SubjectOrder: ord.subjectOrder, TopicOrder: ord.topicOrder, LevelOrder: ord.levelOrder,
+          _id: uid("q")
+        };
+        rawData.push(newQ);
+        grouped = groupData(rawData);
+        persistCurrentProgress();
+        refreshFilterOptions();
+        resetForm();
+        panel.style.display = "none";
+        pendingFocusQid = newQ._id; // jump straight to the new question's accordion
+        render();
+        showSuccessAlert("Question added successfully.");
+        flashHighlightItem(document.querySelector('[data-qid="' + newQ._id + '"]'));
+      }
+
+      saveBtn.addEventListener("click", finishNewQuestionSave);
+    })();
+
+    /* ============ Event wiring ============ */
+    document.getElementById("csvInput").addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (file) loadCSV(file);
+    });
+    document.getElementById("downloadProgressBtn").addEventListener("click", downloadProgress);
+    document.getElementById("csvSwitcher").addEventListener("change", e => switchCSV(e.target.value));
+    document.getElementById("resetAllBtn").addEventListener("click", resetAllData);
+    document.getElementById("tempModeToggle").addEventListener("change", e => {
+      tempMode = e.target.checked;
+      localStorage.setItem(LS_TEMP_MODE, tempMode);
+    });
+    document.getElementById("starredOnlyToggle").addEventListener("change", e => {
+      showStarredOnly = e.target.checked;
+      saveFilterPrefs();
+      render();
+    });
+
+    /* Requirement: clear/reset the question search box and its results in one click. */
+    document.getElementById("questionSearchClearBtn").addEventListener("click", () => {
+      const input = document.getElementById("questionSearchInput");
+      const results = document.getElementById("questionSearchResults");
+      if (input) { input.value = ""; input.focus(); }
+      if (results) { results.textContent = ""; results.style.display = "none"; }
+    });
+
+    /* Requirement: "Manage Subjects / Topics / Levels" panel is hidden by default and only
+       (re)built when actually opened. */
+    document.getElementById("manageMetadataToggleLink").addEventListener("click", e => {
+      e.preventDefault();
+      const card = document.getElementById("manageMetadataCard");
+      const link = e.currentTarget;
+      const opening = card.style.display === "none";
+      card.style.display = opening ? "block" : "none";
+      link.textContent = "Manage Subjects / Topics / Levels " + (opening ? "▲" : "▾");
+      if (opening) renderManageMetadataPanel();
+    });
+
+    /* Requirement #1: show/hide link above the toolbar + filter cards, state remembered
+       across reloads via localStorage. */
+    function applyCardsToggleState() {
+      const hidden = localStorage.getItem(LS_CARDS_HIDDEN) === "true";
+      document.getElementById("controlsWrapper").style.display = hidden ? "none" : "";
+      document.getElementById("toggleCardsLink").textContent = hidden ? "Show Controls ▾" : "Hide Controls ▲";
+    }
+    document.getElementById("toggleCardsLink").addEventListener("click", e => {
+      e.preventDefault();
+      const hidden = localStorage.getItem(LS_CARDS_HIDDEN) === "true";
+      localStorage.setItem(LS_CARDS_HIDDEN, String(!hidden));
+      applyCardsToggleState();
+    });
+    applyCardsToggleState();
+
+    /* Icon-only floating Edit Icon and Focus Mode toggles. Both default to unchecked on a
+       user's very first visit (no stored value yet); whatever the user leaves them at is
+       then remembered in localStorage for every future session. */
+    function initPersistedToggle(checkboxId, storageKey, applyFn) {
+      const checkbox = document.getElementById(checkboxId);
+      const checked = localStorage.getItem(storageKey) === "true"; // missing key -> false (unchecked)
+      checkbox.checked = checked;
+      applyFn(checked);
+      checkbox.addEventListener("change", e => {
+        localStorage.setItem(storageKey, String(e.target.checked));
+        applyFn(e.target.checked);
+      });
+    }
+
+    initPersistedToggle("editModeToggle", LS_EDIT_MODE_ON, checked => {
+      document.body.classList.toggle("edit-mode-off", !checked);
+      editModeOn = checked;
+    });
+
+    /* Requirement: floating icon that closes every currently-open Subject/Topic/Level/Question
+       accordion in one click. */
+    document.getElementById("closeAllAccordionsBtn").addEventListener("click", () => {
+      document.querySelectorAll("#rootAccordion .accordion-collapse.show").forEach(collapse => {
+        collapse.classList.remove("show");
+        const item = collapse.parentElement;
+        const btn = item && item.querySelector(":scope > .accordion-header > .accordion-button");
+        if (btn) {
+          btn.classList.add("collapsed");
+          btn.setAttribute("aria-expanded", "false");
+        }
+      });
+      updateHeaderBreadcrumb();
+    });
+
+    initPersistedToggle("focusModeToggle", LS_FOCUS_MODE_ON, checked => {
+      document.body.classList.toggle("focus-mode", checked);
+
+      // If focus mode is ON, force editModeToggle to FALSE
+      if (checked) {
+        const editToggle = document.getElementById("editModeToggle");
+
+        if (editToggle) {
+          editToggle.checked = false;
+          // Trigger change event to fire editModeToggle's handler and update body class
+          editToggle.dispatchEvent(new Event("change"));
+        } else {
+          // Fallback if element isn't directly targetable by ID
+          localStorage.setItem(LS_EDIT_MODE_ON, "false");
+          document.body.classList.add("edit-mode-off");
+        }
+      }
+    });
+
+    /* Requirement #3: Bootstrap's collapse events bubble, so one delegated listener on
+       document catches every manual Subject/Topic/Level accordion click (the render()-time
+       calls above already cover programmatic/auto expansion, which doesn't fire these). */
+    document.addEventListener("shown.bs.collapse", updateHeaderBreadcrumb);
+    document.addEventListener("hidden.bs.collapse", updateHeaderBreadcrumb);
+
+    /* ============ Timer ============ */
+    function formatTimer(totalSeconds) {
+      const pad = n => String(n).padStart(2, "0");
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = totalSeconds % 60;
+      return pad(h) + ":" + pad(m) + ":" + pad(s);
+    }
+
+    function updateTimerDisplay() {
+      document.getElementById("timerDisplay").textContent = formatTimer(timerSeconds);
+    }
+
+    /* Header is now permanently fixed, so body needs a matching top padding at all times.
+       Re-synced on load and whenever the header's own height changes (e.g. the breadcrumb
+       text wrapping to a new line), via ResizeObserver so it never needs a manual trigger. */
+    function syncHeaderPadding() {
+      const header = document.querySelector(".app-header");
+      if (!header) return;
+      const rect = header.getBoundingClientRect();
+      document.body.style.paddingTop = rect.height + "px";
+    }
+    (function watchHeaderHeight() {
+      const header = document.querySelector(".app-header");
+      if (!header) return;
+      syncHeaderPadding();
+      if (window.ResizeObserver) {
+        new ResizeObserver(syncHeaderPadding).observe(header);
+      } else {
+        window.addEventListener("resize", syncHeaderPadding);
+      }
+    })();
+
+    function persistTimerIfNeeded() {
+      if (timerShouldPersist) localStorage.setItem(LS_TIMER, String(timerSeconds));
+    }
+
+    function startTimer() {
+      if (timerInterval) return;
+      timerShouldPersist = true;
+      timerInterval = setInterval(() => {
+        timerSeconds++;
+        updateTimerDisplay();
+        persistTimerIfNeeded();
+      }, 1000);
+    }
+
+    /* Requirement #3 (previous revision): while running, keep the elapsed count in storage so an
+       accidental reload doesn't lose it. Reset clears storage and stops persisting until Start
+       is pressed again. */
+    document.getElementById("timerStartBtn").addEventListener("click", startTimer);
+
+    document.getElementById("timerPauseBtn").addEventListener("click", () => {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    });
+
+    document.getElementById("timerResetBtn").addEventListener("click", () => {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      timerSeconds = 0;
+      timerShouldPersist = false;
+      localStorage.removeItem(LS_TIMER);
+      updateTimerDisplay();
+    });
+
+    // Restore a persisted timer value and keep it running from where it left off.
+    (function restoreTimer() {
+      const stored = localStorage.getItem(LS_TIMER);
+      if (stored === null) return;
+      const secs = parseInt(stored, 10);
+      if (!isNaN(secs) && secs >= 0) {
+        timerSeconds = secs;
+        updateTimerDisplay();
+        startTimer();
+      }
+    })();
+
+    // Backup flush in case a tick's write gets missed right before the tab closes.
+    window.addEventListener("beforeunload", persistTimerIfNeeded);
+
+    initApp();
+  </script>
+
+  <script src="data.js"></script>
+</body>
+
+</html>
