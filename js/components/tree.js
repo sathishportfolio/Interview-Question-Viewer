@@ -230,7 +230,7 @@ function parseBulkQuestionsCsv(rawText, scope) {
   let lastTopic = scope.Topic || "";
   let lastSubTopic = scope.SubTopic || "";
 
-  const rows = parsed.data.map(row => {
+  const allRows = parsed.data.map(row => {
     const rawSubject = keys.Subject ? (row[keys.Subject] || "").trim() : "";
     const rawTopic = keys.Topic ? (row[keys.Topic] || "").trim() : "";
     const rawSubTopic = keys.SubTopic ? (row[keys.SubTopic] || "").trim() : "";
@@ -260,8 +260,17 @@ function parseBulkQuestionsCsv(rawText, scope) {
       TopicOrder: keys.TopicOrder ? parseOptionalOrder(row[keys.TopicOrder]) : undefined,
       SubTopicOrder: keys.SubTopicOrder ? parseOptionalOrder(row[keys.SubTopicOrder]) : undefined
     };
-  }).filter(r => r.Question);
-  return { rows };
+  });
+
+  // Requirement: Bulk Add/Update only ever creates/updates actual QUESTIONS — a row with a
+  // Subject/Topic/SubTopic but no Question text (an empty-group marker row, e.g. copied from
+  // buildQuestionsCsv()'s own empty-group export, api.js) has nothing to add/update and is
+  // deliberately ignored rather than erroring the whole paste out — but silently, previously,
+  // with no way to tell "ignored on purpose" apart from "my Question column header didn't
+  // match". Counted here so bulkAddQuestionsCsv()/bulkUpdateQuestionsCsv() can report it.
+  const rows = allRows.filter(r => r.Question);
+  const skippedNoQuestion = allRows.length - rows.length;
+  return { rows, skippedNoQuestion };
 }
 
 // Requirement: "+ Bulk Add (CSV)" — creates a new question per row (Subject/Topic/SubTopic
@@ -269,14 +278,14 @@ function parseBulkQuestionsCsv(rawText, scope) {
 // SubTopic+Question already exists (same case-insensitive questionExistsIn() dedup every other
 // add path in this file uses) rather than erroring the whole paste out.
 function bulkAddQuestionsCsv(scope, rawText) {
-  const { rows, error } = parseBulkQuestionsCsv(rawText, scope);
+  const { rows, error, skippedNoQuestion } = parseBulkQuestionsCsv(rawText, scope);
   if (error) return { error };
   return withHistory(() => {
-    let added = 0, lastQid = null, lastGroup = null;
+    let added = 0, skippedMissingHierarchy = 0, skippedDuplicate = 0, lastQid = null, lastGroup = null;
     rows.forEach(r => {
-      if (!r.Subject || !r.Topic || !r.SubTopic) return; // needs a full hierarchy to create a question
+      if (!r.Subject || !r.Topic || !r.SubTopic) { skippedMissingHierarchy++; return; } // needs a full hierarchy to create a question
       const siblings = state.rawData.filter(x => x.Subject === r.Subject && x.Topic === r.Topic && x.SubTopic === r.SubTopic);
-      if (questionExistsIn(siblings, r.Question)) return;
+      if (questionExistsIn(siblings, r.Question)) { skippedDuplicate++; return; }
       // Requirement: a Bulk Copy → Bulk Add round trip preserves the original
       // Order/SubjectOrder/TopicOrder/SubTopicOrder values when the paste provided them (r.Order
       // etc. from parseBulkQuestionsCsv()); a hand-written paste that omits those columns falls
@@ -298,7 +307,7 @@ function bulkAddQuestionsCsv(scope, rawText) {
       lastQid = newQ._id;
       lastGroup = { subject: r.Subject, topic: r.Topic, subTopic: r.SubTopic };
     });
-    return { added, lastQid, lastGroup };
+    return { added, skippedNoQuestion, skippedMissingHierarchy, skippedDuplicate, lastQid, lastGroup };
   });
 }
 
@@ -307,13 +316,13 @@ function bulkAddQuestionsCsv(scope, rawText) {
 // place. A row that doesn't match anything existing is added as new instead (same creation logic
 // as bulkAddQuestionsCsv()), so nothing pasted is silently dropped.
 function bulkUpdateQuestionsCsv(scope, rawText) {
-  const { rows, error } = parseBulkQuestionsCsv(rawText, scope);
+  const { rows, error, skippedNoQuestion } = parseBulkQuestionsCsv(rawText, scope);
   if (error) return { error };
   return withHistory(() => {
     const norm = t => (t || "").trim().toLowerCase();
-    let updated = 0, added = 0, lastQid = null, lastGroup = null;
+    let updated = 0, added = 0, skippedMissingHierarchy = 0, lastQid = null, lastGroup = null;
     rows.forEach(r => {
-      if (!r.Subject || !r.Topic || !r.SubTopic) return;
+      if (!r.Subject || !r.Topic || !r.SubTopic) { skippedMissingHierarchy++; return; }
       const existing = state.rawData.find(x =>
         x.Subject === r.Subject && x.Topic === r.Topic && x.SubTopic === r.SubTopic && norm(x.Question) === norm(r.Question));
       if (existing) {
@@ -353,8 +362,21 @@ function bulkUpdateQuestionsCsv(scope, rawText) {
         lastGroup = { subject: r.Subject, topic: r.Topic, subTopic: r.SubTopic };
       }
     });
-    return { updated, added, lastQid, lastGroup };
+    return { updated, added, skippedNoQuestion, skippedMissingHierarchy, lastQid, lastGroup };
   });
+}
+
+// Requirement: bulkAddQuestionsCsv()/bulkUpdateQuestionsCsv() results carry ignored-row counts
+// (skippedNoQuestion/skippedMissingHierarchy/skippedDuplicate — bulkUpdate never sets the last
+// one, since an "already exists" row there gets updated, not skipped) — this turns whichever of
+// those are nonzero into a plain-English list the addPanel/updatePanel submit handlers below fold
+// into their alert, instead of ignoring rows with no way to tell the user why.
+function describeSkipReasons(result) {
+  const parts = [];
+  if (result.skippedNoQuestion) parts.push(result.skippedNoQuestion + " ignored (no Question text — Subject/Topic/SubTopic-only row)");
+  if (result.skippedMissingHierarchy) parts.push(result.skippedMissingHierarchy + " ignored (missing Subject/Topic/SubTopic)");
+  if (result.skippedDuplicate) parts.push(result.skippedDuplicate + " ignored (already exists)");
+  return parts;
 }
 
 // Shared "commit" step for both bulkAddQuestionsCsv() and bulkUpdateQuestionsCsv() results —
@@ -535,18 +557,26 @@ export function createBulkQuestionCsvTools(scope, getRows, getEmptyGroups) {
   const addPanel = buildPanel("add", "Add All", rawText => {
     const result = bulkAddQuestionsCsv(scope, rawText);
     if (result.error) { alert(result.error); return false; }
-    if (!result.added) { alert("No new rows to add (all blank, duplicate, or missing Subject/Topic/SubTopic)."); return false; }
+    const skipped = describeSkipReasons(result);
+    if (!result.added) {
+      alert(skipped.length ? "No new questions added — " + skipped.join("; ") + "." : "No new rows to add (all blank, duplicate, or missing Subject/Topic/SubTopic).");
+      return false;
+    }
     commitBulkQuestionsCsvChange(result.lastQid, result.lastGroup);
-    showSuccessAlert(result.added + " question(s) added.");
+    showSuccessAlert(result.added + " question(s) added." + (skipped.length ? " (" + skipped.join("; ") + ".)" : ""));
     return true;
   });
 
   const updatePanel = buildPanel("update", "Update All", rawText => {
     const result = bulkUpdateQuestionsCsv(scope, rawText);
     if (result.error) { alert(result.error); return false; }
-    if (!result.updated && !result.added) { alert("No valid rows found (need at least a Question column, plus Subject/Topic/SubTopic)."); return false; }
+    const skipped = describeSkipReasons(result);
+    if (!result.updated && !result.added) {
+      alert(skipped.length ? "No rows updated or added — " + skipped.join("; ") + "." : "No valid rows found (need at least a Question column, plus Subject/Topic/SubTopic).");
+      return false;
+    }
     commitBulkQuestionsCsvChange(result.lastQid, result.lastGroup);
-    showSuccessAlert(result.updated + " updated, " + result.added + " added.");
+    showSuccessAlert(result.updated + " updated, " + result.added + " added." + (skipped.length ? " (" + skipped.join("; ") + ".)" : ""));
     return true;
   });
 
