@@ -25,7 +25,14 @@ import {
   updateTimerDisplay, persistTimerIfNeeded, startTimer, watchHeaderHeight, restoreTimer
 } from './components/timer.js';
 import { initHistoryButtons, undo, redo, clearHistory } from './history.js';
-import { autoSyncOnLoad, manualPull } from './sync.js';
+import { ensureSyncSetup, autoSyncOnLoad, manualPull } from './sync.js';
+
+/* Requirement: on this device's very first-ever load, block all further startup (everything
+   below this line — event wiring, initApp(), autoSyncOnLoad()) behind a synchronous prompt()
+   loop until both a JSONBin Master Key and Bin ID are provided; opens jsonbin.io/app/bins in a
+   new tab first so there's somewhere to get them. No-ops immediately (no tab, no prompt) on every
+   later load, once both are already stored locally. Must run before anything else in this file. */
+ensureSyncSetup();
 
 // --- Event Listeners ---
 // (csvInput's change listener is registered once, in the Event wiring block below.)
@@ -106,6 +113,25 @@ initPersistedToggle("editModeToggle", LS_EDIT_MODE_ON, checked => {
   state.editModeOn = checked;
 });
 
+/* Requirement: Floating Toggle Button — desktop already reveals the group on hover (pure CSS,
+   see .floating-toggles:hover in style.css); this click listener is what makes it also work on
+   mobile, where there's no real hover to rely on. Tapping the main button toggles an "expanded"
+   class that the same CSS keys off; tapping anywhere else while expanded (or the main button
+   again) collapses it back down to just the one icon. */
+const floatingToggles = document.getElementById("floatingToggles");
+const floatingToggleMainBtn = document.getElementById("floatingToggleMainBtn");
+floatingToggleMainBtn.addEventListener("click", e => {
+  e.stopPropagation();
+  const expanded = floatingToggles.classList.toggle("expanded");
+  floatingToggleMainBtn.setAttribute("aria-expanded", String(expanded));
+});
+document.addEventListener("click", e => {
+  if (floatingToggles.classList.contains("expanded") && !floatingToggles.contains(e.target)) {
+    floatingToggles.classList.remove("expanded");
+    floatingToggleMainBtn.setAttribute("aria-expanded", "false");
+  }
+});
+
 /* Requirement: floating icon that closes every currently-open Subject/Topic/SubTopic/Question
    accordion in one click. */
 document.getElementById("closeAllAccordionsBtn").addEventListener("click", () => {
@@ -172,10 +198,10 @@ window.addEventListener("beforeunload", persistTimerIfNeeded);
 initApp();
 
 /* Requirement: cross-device sync (js/sync.js) is now fully automatic — no Push/Pull buttons.
-   Called last (after initApp() has already rendered from whatever's local) so a first-ever visit
-   shows the app immediately instead of blocking on a prompt() before anything's on screen.
-   autoSyncOnLoad() prompts once (ever) for the JSONBin Master Key/Bin ID if not already known,
-   silently pulls the latest cloud state if it differs from what's local (reloading if so), and
-   installs a background watcher that debounces a push after any local "iqv_"-prefixed change
-   from here on. */
+   Called last (after initApp() has already rendered from whatever's local) so the app shows
+   itself immediately instead of blocking again here — the blocking part already happened at the
+   top of this file (ensureSyncSetup()), so by this point a Master Key/Bin ID are guaranteed to
+   exist. autoSyncOnLoad() silently pulls the latest cloud state if it differs from what's local
+   (reloading if so), and installs a background watcher that debounces a push after any local
+   "iqv_"-prefixed change from here on. */
 autoSyncOnLoad();

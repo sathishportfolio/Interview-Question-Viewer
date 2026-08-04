@@ -1,11 +1,12 @@
 /* Cross-device sync via JSONBin.io — automatic push, with one manual Pull button (#pullSyncBtn)
  * for an on-demand refresh.
  *
- * - autoSyncOnLoad() (called once from app.js on startup): the first time this device is ever
- *   opened, prompts once for the Master Key and — leave blank if this is the very first device
- *   you're setting up — the Bin ID (see ensureMasterKey()/ensureBinId()). Never prompts again
- *   after that (LS_SYNC_PROMPTED), even if left blank, so declining sync doesn't nag on every
- *   load. If both are already known, silently pulls the latest cloud state and applies + reloads
+ * - ensureSyncSetup() (called first thing in app.js, before any other startup code): on a device
+ *   that has never provided both a Master Key and Bin ID, opens jsonbin.io/app/bins in a new tab
+ *   and blocks (synchronous prompt() loop) until both are entered — sync is mandatory, not
+ *   skippable. Returns immediately, no tab/prompt, once both are already stored locally.
+ * - autoSyncOnLoad() (called once from app.js on startup, after ensureSyncSetup() has already
+ *   guaranteed both values exist): silently pulls the latest cloud state and applies + reloads
  *   ONLY if it actually differs from what's already local (skips a pointless reload otherwise).
  * - installAutoPushWatcher() intercepts every localStorage.setItem/removeItem call for an
  *   "iqv_"-prefixed key — i.e. every piece of state this app persists (CSV data, filters, active
@@ -40,8 +41,8 @@
 
 const LS_SYNC_KEY = "jbsync_masterkey";
 const LS_SYNC_BIN = "jbsync_binid";
-const LS_SYNC_PROMPTED = "jbsync_prompted";
 const IQV_PREFIX = "iqv_";
+const JSONBIN_BINS_URL = "https://jsonbin.io/app/bins";
 const API_BASE = "https://api.jsonbin.io/v3/b";
 const PUSH_DEBOUNCE_MS = 3000;
 
@@ -297,17 +298,47 @@ function installAutoPushWatcher() {
   };
 }
 
+// Requirement: sync is now mandatory, not opt-in — on a device that has never provided both a
+// Master Key and Bin ID, block all further app startup behind a blocking prompt() loop (prompt()
+// is synchronous, so this halts the rest of app.js's top-to-bottom module execution until both
+// values are in hand) instead of the old "prompt once, skip forever if left blank" flow. Opens
+// jsonbin.io/app/bins in a new tab first so the user has somewhere to find/create their Master
+// Key and bin without leaving this page. A device that already has both stored (every load after
+// the first) returns immediately — no tab, no prompt.
+export function ensureSyncSetup() {
+  let masterKey = getMasterKey();
+  let binId = getBinId();
+  if (masterKey && binId) return;
+
+  window.open(JSONBIN_BINS_URL, "_blank", "noopener");
+
+  while (!masterKey) {
+    masterKey = (prompt(
+      "Setup required before you can use this app: enter your JSONBin.io Master Key.\n\n" +
+      "A new tab was opened to jsonbin.io/app/bins — sign in (or create a free account) and " +
+      "copy your Master Key from there.\n\n" +
+      "Stored only in this browser's localStorage; only ever sent to api.jsonbin.io."
+    ) || "").trim();
+  }
+  rawSetItem(LS_SYNC_KEY, masterKey);
+
+  while (!binId) {
+    binId = (prompt(
+      "Now enter your sync Bin ID.\n\n" +
+      "First device ever? Create a new bin at the jsonbin.io/app/bins tab just opened and paste " +
+      "its Bin ID here. Adding another device to existing sync? Enter that same Bin ID."
+    ) || "").trim();
+  }
+  rawSetItem(LS_SYNC_BIN, binId);
+}
+
 export async function autoSyncOnLoad() {
   installAutoPushWatcher();
 
-  const alreadyPrompted = localStorage.getItem(LS_SYNC_PROMPTED) === "1";
-  let masterKey = getMasterKey();
-  if (!masterKey && !alreadyPrompted) masterKey = ensureMasterKey();
-
-  let binId = getBinId();
-  if (masterKey && !binId && !alreadyPrompted) binId = ensureBinId();
-
-  rawSetItem(LS_SYNC_PROMPTED, "1");
-
+  // ensureSyncSetup() (called earlier, at the very top of app.js) guarantees both are already
+  // present by the time this runs — this re-read (rather than trusting a passed-in value) just
+  // stays consistent with how every other getter here works.
+  const masterKey = getMasterKey();
+  const binId = getBinId();
   if (masterKey && binId) await silentPull(masterKey, binId);
 }

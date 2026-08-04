@@ -20,7 +20,7 @@
 
 ---
 
-Read `refactored/README-AI.md` for context on this project, then implement the following features and refactors:
+Read `README-AI.md` for context on this project, then implement the following features and refactors:
 
 
 Donot run tests i will do verifications manually

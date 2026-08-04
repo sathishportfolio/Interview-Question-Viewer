@@ -170,20 +170,30 @@ provide these title points in plain html <ul><li></li></ul>
 
   <div id="globalAlertHolder" class="global-alert-holder"></div>
 
-  <div class="floating-toggles">
-    <button type="button" id="closeAllAccordionsBtn" class="floating-toggle-item btn btn-outline-secondary btn-rounded" title="Close all open accordions">
-      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+  <!-- Requirement: collapses down to a single icon button — desktop reveals the rest of the
+       group on hover, mobile (no real hover) reveals it on a tap of the main button instead (see
+       #floatingToggleMainBtn's click listener in app.js and the (hover: hover) media-gated CSS in
+       style.css). The main button is always visible on its own; .floating-toggle-group is the
+       part that's hidden/revealed. -->
+  <div class="floating-toggles" id="floatingToggles">
+    <div class="floating-toggle-group">
+      <button type="button" id="closeAllAccordionsBtn" class="floating-toggle-item btn btn-outline-secondary btn-rounded" title="Close all open accordions">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+      <button type="button" id="undoBtn" class="floating-toggle-item btn btn-outline-secondary btn-rounded" title="Undo last change" disabled>
+        <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+      </button>
+      <button type="button" id="redoBtn" class="floating-toggle-item btn btn-outline-secondary btn-rounded" title="Redo last undone change" disabled>
+        <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+      </button>
+      <label class="floating-toggle-item editModeToggle btn btn-outline-secondary btn-rounded" title="Edit Mode: ON shows every control; OFF hides the toolbar/filter/add-new cards plus editing-only actions (drag, edit, copy, move, delete, duplicate)">
+        <input type="checkbox" id="editModeToggle" class="visually-hidden">
+        <i class="fa-solid fa-pen" aria-hidden="true"></i>
+      </label>
+    </div>
+    <button type="button" id="floatingToggleMainBtn" class="floating-toggle-item btn btn-outline-secondary btn-rounded" title="More actions" aria-expanded="false" aria-label="More actions">
+      <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
     </button>
-    <button type="button" id="undoBtn" class="floating-toggle-item btn btn-outline-secondary btn-rounded" title="Undo last change" disabled>
-      <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
-    </button>
-    <button type="button" id="redoBtn" class="floating-toggle-item btn btn-outline-secondary btn-rounded" title="Redo last undone change" disabled>
-      <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
-    </button>
-    <label class="floating-toggle-item editModeToggle btn btn-outline-secondary btn-rounded" title="Edit Mode: ON shows every control; OFF hides the toolbar/filter/add-new cards plus editing-only actions (drag, edit, copy, move, delete, duplicate)">
-      <input type="checkbox" id="editModeToggle" class="visually-hidden">
-      <i class="fa-solid fa-pen" aria-hidden="true"></i>
-    </label>
   </div>
 
   <script type="module" src="./js/app.js"></script>

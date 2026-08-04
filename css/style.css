@@ -721,6 +721,37 @@ body {
   color: #fff;
 }
 
+/* Requirement: the floating toggle stack collapses to a single icon button
+   (#floatingToggleMainBtn) — everything else (.floating-toggle-group) stays hidden until
+   revealed. Desktop reveals it on hover of the whole cluster; mobile (no real hover — gated via
+   the (hover: hover) media feature, not a viewport-width breakpoint, so it also covers desktops
+   with touch screens correctly) reveals it via the "expanded" class instead, toggled by
+   #floatingToggleMainBtn's click listener in app.js (also closes on an outside click/tap). */
+.floating-toggle-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .7rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+
+.floating-toggles.expanded .floating-toggle-group {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .floating-toggles:hover .floating-toggle-group {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+}
+
 .global-alert-holder {
   position: fixed;
   top: 6.5rem;
@@ -1167,4 +1198,68 @@ body.edit-mode-off .subtopic-select-checkbox {
 
 .drop-target-highlight.is-active {
   display: block;
+}
+
+/* ==========================================================================
+   Mobile view layout & accordion (≤768px)
+   Requirement: a stripped-down, read-only-by-default mobile layout — only
+   #globalStatsBadges, #questionSearchWrap, and the question tree itself are shown; the
+   CSV/timer/filter toolbar is hidden entirely, the nested Subject>Topic>SubTopic tree defaults
+   to the flat grouped view (state.flatGroupView default, see initApp() in api.js — CSS alone
+   can't drive that part, it's a render()-time JS choice), and each question's editing controls
+   (status toggles, move, delete, Edit Question/Answer) are hidden so the accordion is purely for
+   reading. The three "Question Actions" (copy question text, copy+search on Google, active-
+   question flag — qInlineActions in createQuestion(), tree.js) are deliberately NOT covered by
+   this hiding: they live inside .accordion-button itself, not as a direct child of
+   .accordion-header, which is what distinguishes them from the controlsStart/controlsEnd status
+   rows below and keeps them reachable here.
+   ========================================================================== */
+@media (max-width: 768px) {
+
+  #controlsWrapper,
+  .timer-widget {
+    display: none !important;
+  }
+
+  /* Requirement: hide the Done/Review/Duplicate/Less/Star status cluster, the Move and Delete
+     icons, the drag handle, and the bulk-select checkbox — everything editing-related in a
+     question header except the three inline Question Actions inside the button itself (see
+     comment above; those live at .accordion-header > .accordion-button > .status-icon-row, one
+     level deeper than the selector below, so they're untouched). */
+  .q-item .accordion-header>.status-icon-row,
+  .q-item .drag-handle,
+  .q-item .q-select-checkbox {
+    display: none !important;
+  }
+
+  /* Requirement: read-only answer body — no Edit Question, move-up/down/top/bottom, or
+     Edit/Add Answer buttons. */
+  .answer-body .status-controls,
+  .answer-body .answer-edit-row {
+    display: none !important;
+  }
+
+  /* Requirement: bigger touch targets and a roomier feel for expand/collapse on a small screen —
+     Bootstrap's default accordion-button padding is tuned for desktop pointer precision, not a
+     thumb. */
+  .q-item .accordion-button {
+    padding-top: .9rem;
+    padding-bottom: .9rem;
+    min-height: 3rem;
+    transition: background-color .2s ease;
+  }
+
+  .q-item .accordion-header {
+    min-height: 3rem;
+  }
+
+  .accordion-body.answer-body {
+    padding: 1rem .9rem 1.25rem;
+  }
+
+  /* Smoother, slightly slower collapse animation reads better at touch speed than Bootstrap's
+     default snap. */
+  .accordion-collapse.collapsing {
+    transition: height .3s ease;
+  }
 }

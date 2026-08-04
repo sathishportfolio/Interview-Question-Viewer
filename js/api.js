@@ -337,7 +337,14 @@ export function initApp() {
   const storedTemp = localStorage.getItem(LS_TEMP_MODE);
   state.tempMode = storedTemp === null ? true : storedTemp === "true";
   document.getElementById("tempModeToggle").checked = state.tempMode;
-  state.flatGroupView = localStorage.getItem(LS_FLAT_GROUP_VIEW) === "true";
+  // Requirement: default to the flat grouped view on mobile — but only as a DEFAULT, i.e. only
+  // when this device has never had the toggle explicitly set (localStorage key absent). Once a
+  // user (on any device) has flipped it either way, that stored value always wins, same as any
+  // other persisted toggle in this app.
+  const storedFlatGroupView = localStorage.getItem(LS_FLAT_GROUP_VIEW);
+  state.flatGroupView = storedFlatGroupView === null
+    ? window.matchMedia("(max-width: 768px)").matches
+    : storedFlatGroupView === "true";
   const storedDragDrop = localStorage.getItem(LS_DRAG_DROP_ON);
   state.dragDropOn = storedDragDrop === null ? true : storedDragDrop === "true";
   document.body.classList.toggle("drag-drop-off", !state.dragDropOn);
