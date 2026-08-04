@@ -1395,8 +1395,20 @@ body.edit-mode-off .subtopic-select-checkbox {
     transition: background-color .2s ease;
   }
 
+  /* Requirement: Star (controlsStart), the question text+copy/search (accordion-button), and
+     the Move/status-cluster/Delete icons (controlsEnd — only actually visible while Edit Mode is
+     on; see the :last-of-type hiding rule above) must never fight each other for width by
+     squeezing the question text down to nothing. controlsStart/controlsEnd both carry
+     flex:0 0 auto (.status-icon-row.compact, non-mobile — they never shrink) and qText below
+     gets a min-width FLOOR instead of 0, so once every item's minimum width is accounted for and
+     still doesn't fit a narrow screen, the header just scrolls horizontally (overflow-x:auto)
+     instead of compressing anything illegibly. Star/text/copy/search sit first in DOM/flex
+     order, so they're already the visible portion by default — only controlsEnd, at the end,
+     ever needs a swipe to reach. */
   .q-item .accordion-header {
     min-height: 3rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
   }
 
   .accordion-body.answer-body {
@@ -1413,15 +1425,23 @@ body.edit-mode-off .subtopic-select-checkbox {
   .q-item .accordion-button {
     flex-wrap: nowrap;
     align-items: center;
+    /* Standard flexbox "let a shrinkable child actually shrink" fix — without this, the
+       button's own automatic min-width (based on qText's full, unshrunk content) would win out
+       over qText's explicit 6rem floor below, defeating the point of that floor. */
+    min-width: 0;
   }
 
   /* Requirement: the question TEXT stays single-line (ellipsis-truncated, not wrapped) by
      default — this is what applies while Edit Mode is ON, keeping every accordion row the same
-     consistent height while editing. min-width:0 is what lets qText shrink below its content
-     width so it can actually truncate instead of forcing the row wider than the screen. */
+     consistent height while editing. min-width used to be 0 (lets qText shrink freely, down to
+     nothing once controlsEnd's icons need the room) — now a 6rem FLOOR instead: qText still
+     shrinks to fit when there's room, but never below a readable width. Once every item's
+     minimum (this floor plus Star/copy/search's own fixed widths) no longer fits, the
+     .accordion-header itself scrolls horizontally instead (overflow-x:auto, see above) rather
+     than continuing to compress the text past legibility. */
   .q-item .q-text-link {
     flex: 1 1 auto;
-    min-width: 0;
+    min-width: 6rem;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;

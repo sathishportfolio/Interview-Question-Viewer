@@ -119,8 +119,11 @@ export function moveQuestionByStep(q, direction) {
   highlightMovedQuestion(q._id);
 }
 
-export function highlightMovedQuestion(qid) {
-  flashHighlightItem(document.querySelector('[data-qid="' + qid + '"]'));
+// `sourceCtx` (optional) passes straight through to flashHighlightItem() — e.g. a
+// { jumpBack, jumpBackLabel } pair so the flash highlight itself carries a "return to where I
+// was" icon (see the Starred toggle below, which is the one caller that currently uses this).
+export function highlightMovedQuestion(qid, sourceCtx) {
+  flashHighlightItem(document.querySelector('[data-qid="' + qid + '"]'), sourceCtx);
 }
 
 export function reorderSubjects(newOrderNames) {
@@ -2816,12 +2819,21 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
     onToggle: active => withHistory(() => {
       q.Starred = active;
       persistCurrentProgress();
+      // Requirement: starring jumps the view to the question's new (moved-to-top) position and
+      // flashes it, same as before — but now that flash carries a "jump back" icon
+      // (sourceCtx.jumpBack, flashHighlightItem()/fuzzyHints.js) that smoothly scrolls back to
+      // exactly where the user was reading before the star action moved things around, so
+      // continuity isn't lost just because the list reordered underneath them.
+      const scrollYBeforeMove = window.scrollY;
       // Re-sort this SubTopic so Starred stays first, then jump back to the question
       // (its index number will have changed) and flash it so the move is obvious.
       state.grouped = groupData(state.rawData, state.emptyGroups);
       state.pendingFocusQid = q._id;
       render();
-      highlightMovedQuestion(q._id);
+      highlightMovedQuestion(q._id, {
+        jumpBack: () => window.scrollTo({ top: scrollYBeforeMove, left: 0, behavior: "smooth" }),
+        jumpBackLabel: "Scroll back to where you were"
+      });
     })
   });
 

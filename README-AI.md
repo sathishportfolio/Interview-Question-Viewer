@@ -2,6 +2,10 @@
 
 **⚠️ Mechanically split** from single-file `InterviewQuestionViewer_v24.html` (verified: valid ES modules, every function/import accounted for) but **not exercised in a browser**. Test features before relying on them; keep the original `.html` as fallback.
 
+## Working agreement
+- **Default: never auto-commit/push.** After making the requested code changes, stop and explicitly ask the user whether to commit and push now — wait for their approve/deny before running `git commit`/`git push`.
+- **Exception: if the user's message explicitly says "auto commit and push" (or equivalent explicit auto-authorization wording), commit and push without waiting for approval.** That phrase itself is the authorization — don't ask again in that case.
+
 ## Architecture
 - **Single shared state, no framework.** `js/state.js` exports one mutable `state` (rawData, grouped, activeFilters, flatGroupView, currentFileName, etc.) + localStorage-key constants. Modules mutate `state.x` directly — no reducer/store/event bus.
 - **No reactivity.** After mutating state: persist (if applicable) → call `render()` (`js/components/tree.js`) to rebuild `#rootAccordion` from scratch. Nothing auto-renders.
