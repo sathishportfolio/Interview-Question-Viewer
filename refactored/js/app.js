@@ -24,6 +24,7 @@ import { showSuccessAlert } from './components/fuzzyHints.js';
 import {
   updateTimerDisplay, persistTimerIfNeeded, startTimer, watchHeaderHeight, restoreTimer
 } from './components/timer.js';
+import { initHistoryButtons, undo, redo, clearHistory } from './history.js';
 
 // --- Event Listeners ---
 // (csvInput's change listener is registered once, in the Event wiring block below.)
@@ -112,6 +113,18 @@ document.getElementById("closeAllAccordionsBtn").addEventListener("click", () =>
   });
   updateHeaderBreadcrumb();
 });
+
+/* Requirement: global Undo/Redo — clearHistory() resets the in-memory stacks (there is no
+   persisted history; a page refresh/reload always starts with none) and syncs the buttons'
+   disabled state to that. initHistoryButtons() lets history.js keep both buttons' disabled
+   state in sync with the stacks on every push/undo/redo, without tree.js or history.js needing
+   a reference to the DOM buttons of their own. */
+const undoBtn = document.getElementById("undoBtn");
+const redoBtn = document.getElementById("redoBtn");
+initHistoryButtons(undoBtn, redoBtn);
+clearHistory();
+undoBtn.addEventListener("click", undo);
+redoBtn.addEventListener("click", redo);
 
 /* Requirement #3: Bootstrap's collapse events bubble, so one delegated listener on
    document catches every manual Subject/Topic/SubTopic accordion click (the render()-time

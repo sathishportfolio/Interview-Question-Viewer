@@ -8,16 +8,6 @@
 # TOOL TODO
 
 
-  
-Introduction
-	General
-		Previous Question Bank
-			Tell me about yourself
-
-bulk upload accept above format as well 
-
-- 
-
 # CURRENT PROMPT 
 
 - hide status-icon-btn icon-flag compact if question is not active

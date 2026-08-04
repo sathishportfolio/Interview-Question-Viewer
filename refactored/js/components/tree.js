@@ -1,12 +1,13 @@
 /* Auto-generated module split from InterviewQuestionViewer_v24.html — verify in a browser before trusting this. */
 import { state } from '../state.js';
-import { persistCurrentProgress, saveActiveQuestion } from '../api.js';
+import { persistCurrentProgress, saveActiveQuestion, buildQuestionsCsv } from '../api.js';
 import { filterGroupedData, refreshFilterOptions } from './filters.js';
-import { addQuestionAfterMatch, flashHighlightItem, subTopicAlertKey, openSubTopicAddPanelPrefilled, populateFuzzyHint, showSubTopicAlert, showSuccessAlert } from './fuzzyHints.js';
+import { flashHighlightItem, subTopicAlertKey, showSubTopicAlert, showSuccessAlert } from './fuzzyHints.js';
 import { promptRename, renameSubTopic, renameSubject, renameTopic } from './metadata.js';
 import { populateQuestionSearch } from './search.js';
 import { updateGlobalStatsBadges } from './stats.js';
-import { buildHierarchyOnlyCopyText, buildStructureOnlyCopyText, buildStructureWithAnswerCopyText, buildTreeCopyText, computeStats, flattenQuestions, getExistingOrder, groupData, idsWithInsertAfter, markGroupEmpty, mergeReorder, nextQuestionOrder, questionExistsIn, toBool, uid } from '../utils.js';
+import { buildHierarchyOnlyCopyText, buildStructureOnlyCopyText, buildStructureWithAnswerCopyText, buildTreeCopyText, computeStats, flattenQuestions, getExistingOrder, groupData, markGroupEmpty, mergeReorder, nextQuestionOrder, questionExistsIn, toBool, uid } from '../utils.js';
+import { withHistory } from '../history.js';
 
 // Requirement: dragging a question (or a bulk-selected batch) onto a SubTopic's header — always
 // visible whether that SubTopic is open or collapsed — must work as a drop target, not just its
@@ -74,20 +75,22 @@ function finishDragIfHoveringHeader() {
 }
 
 export function reorderSubTopicQuestions(subject, topic, subTopic, newOrderIds) {
-  const masterArr = state.grouped[subject] && state.grouped[subject][topic] && state.grouped[subject][topic][subTopic];
-  if (!masterArr) return;
+  withHistory(() => {
+    const masterArr = state.grouped[subject] && state.grouped[subject][topic] && state.grouped[subject][topic][subTopic];
+    if (!masterArr) return;
 
-  const idToQ = {};
-  masterArr.forEach(q => { idToQ[q._id] = q; });
+    const idToQ = {};
+    masterArr.forEach(q => { idToQ[q._id] = q; });
 
-  const queue = newOrderIds.slice();
-  const visibleIds = new Set(newOrderIds);
+    const queue = newOrderIds.slice();
+    const visibleIds = new Set(newOrderIds);
 
-  const newMaster = masterArr.map(q => visibleIds.has(q._id) ? idToQ[queue.shift()] : q);
+    const newMaster = masterArr.map(q => visibleIds.has(q._id) ? idToQ[queue.shift()] : q);
 
-  newMaster.forEach((q, i) => { q.Order = i; });
-  state.grouped[subject][topic][subTopic] = newMaster;
-  persistCurrentProgress();
+    newMaster.forEach((q, i) => { q.Order = i; });
+    state.grouped[subject][topic][subTopic] = newMaster;
+    persistCurrentProgress();
+  });
 }
 
 export function moveQuestionToEdge(q, edge) {
@@ -150,146 +153,6 @@ export function reorderSubTopics(subject, topic, newOrderNames) {
   persistCurrentProgress();
 }
 
-// Requirement: New Topic / New SubTopic can each be created on its own — just the one name
-// being created, nothing lower forced — instead of the old cascade that dragged the user all
-// the way down to typing a first question. Creating one just registers it as an empty group
-// (markGroupEmpty(), utils.js); groupData() keeps its header alive with zero questions until
-// something real gets added under it. (New Subject has no single-entry quickAdd anymore — the
-// "+ Bulk Add New Subjects" textarea handles a single line just as well; see render().)
-export function quickAddTopic(subject) {
-  const topic = (prompt('New Topic name under "' + subject + '":') || "").trim();
-  if (!topic) return;
-  if (state.grouped[subject] && state.grouped[subject][topic]) {
-    alert('"' + topic + '" already exists under "' + subject + '".');
-    return;
-  }
-  // Requirement: adding an item shouldn't collapse whatever else was already open — capture/
-  // restore the same way delete* does (see the comment on captureOpenState() up top).
-  const openState = captureOpenState();
-  markGroupEmpty(subject, topic, null);
-  state.grouped = groupData(state.rawData, state.emptyGroups);
-  persistCurrentProgress();
-  render();
-  restoreOpenState(openState);
-  highlightNewGroup(subject, topic, null);
-}
-
-export function quickAddSubTopic(subject, topic) {
-  const subTopic = (prompt('New SubTopic name under "' + subject + " / " + topic + '":') || "").trim();
-  if (!subTopic) return;
-  if (state.grouped[subject] && state.grouped[subject][topic] && state.grouped[subject][topic][subTopic]) {
-    alert('"' + subTopic + '" already exists under "' + subject + " / " + topic + '".');
-    return;
-  }
-  const openState = captureOpenState();
-  markGroupEmpty(subject, topic, subTopic);
-  state.grouped = groupData(state.rawData, state.emptyGroups);
-  persistCurrentProgress();
-  render();
-  restoreOpenState(openState);
-  highlightNewGroup(subject, topic, subTopic);
-}
-
-// Requirement: ONE core bulk-add function reused by all three "+ Bulk Add New ..." buttons
-// (Subjects at the root, Topics within a Subject, SubTopics within a Subject+Topic) — no more
-// separate bulkAddSubjects/bulkAddTopics/bulkAddSubTopics. `fixedSubject`/`fixedTopic` are
-// whatever's already pinned by context (both null at the root, just Subject pinned inside a
-// Subject's own body, both pinned inside a Topic's own body); each textarea line is tab-
-// separated fields for whatever's left: [Subject?, Topic?, SubTopic?, Question?, Answer?],
-// trimmed down to only the fields not already fixed. A line can stop at any depth — trailing
-// fields are optional — so the exact same core handles "just a name" (old bulkAdd* behavior)
-// all the way up to a full Subject→Topic→SubTopic→Question→Answer row in one line:
-//   root:                Subject [Tab] Topic [Tab] SubTopic [Tab] Question [Tab] Answer
-//   inside a Subject:               Topic [Tab] SubTopic [Tab] Question [Tab] Answer
-//   inside a Subject+Topic:                   SubTopic [Tab] Question [Tab] Answer
-// A line stopping short of Question just registers an empty group (markGroupEmpty(), same
-// mechanism as the single quickAdd* functions); a full line creates a real question exactly
-// like createAddQuestionPanel()'s own bulk-CSV path does (nextQuestionOrder() for Order,
-// getExistingOrder() for the hierarchy Order fields, questionExistsIn() to skip a duplicate
-// question silently rather than erroring the whole paste out).
-export function bulkAddHierarchy(fixedSubject, fixedTopic, rawText) {
-  const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
-  if (!lines.length) return { groupsAdded: 0, questionsAdded: 0 };
-
-  // Mirrors markGroupEmpty()'s own "does this already have rows" check, but also checks
-  // state.emptyGroups directly (not the state.grouped cache, which isn't rebuilt until the end
-  // of this whole batch) so it stays accurate against groups added earlier in the *same* paste.
-  function groupAlreadyExists(subject, topic, subTopic) {
-    const hasRows = state.rawData.some(r =>
-      r.Subject === subject && (topic == null || r.Topic === topic) && (subTopic == null || r.SubTopic === subTopic));
-    if (hasRows) return true;
-    return state.emptyGroups.some(g => g.Subject === subject && g.Topic === (topic ?? null) && g.SubTopic === (subTopic ?? null));
-  }
-
-  const openState = captureOpenState();
-  let groupsAdded = 0;
-  let questionsAdded = 0;
-  let lastQid = null;
-  let lastGroup = null;
-
-  lines.forEach(line => {
-    const fields = line.split("\t").map(f => f.trim());
-    let i = 0;
-    const subject = fixedSubject || fields[i++] || "";
-    if (!subject) return;
-    const topic = fixedTopic || fields[i++] || "";
-    if (!topic) {
-      if (!groupAlreadyExists(subject, null, null)) { markGroupEmpty(subject, null, null); groupsAdded++; }
-      lastGroup = { subject, topic: null, subTopic: null };
-      return;
-    }
-    const subTopic = fields[i++] || "";
-    if (!subTopic) {
-      if (!groupAlreadyExists(subject, topic, null)) { markGroupEmpty(subject, topic, null); groupsAdded++; }
-      lastGroup = { subject, topic, subTopic: null };
-      return;
-    }
-    const questionText = fields[i++] || "";
-    if (!questionText) {
-      if (!groupAlreadyExists(subject, topic, subTopic)) { markGroupEmpty(subject, topic, subTopic); groupsAdded++; }
-      lastGroup = { subject, topic, subTopic };
-      return;
-    }
-    const answerText = fields[i++] || "";
-    const siblings = state.rawData.filter(r => r.Subject === subject && r.Topic === topic && r.SubTopic === subTopic);
-    if (questionExistsIn(siblings, questionText)) return; // skip duplicates silently
-    const ord = getExistingOrder(subject, topic, subTopic);
-    const newQ = {
-      Subject: subject, Topic: topic, SubTopic: subTopic,
-      Question: questionText, Answer: answerText,
-      Done: false, ReviewLater: false, Duplicate: false, LessImportant: false, Starred: false,
-      Order: nextQuestionOrder(subject, topic, subTopic),
-      SubjectOrder: ord.subjectOrder, TopicOrder: ord.topicOrder, SubTopicOrder: ord.subTopicOrder,
-      _id: uid("q")
-    };
-    state.rawData.push(newQ);
-    questionsAdded++;
-    lastQid = newQ._id;
-    lastGroup = { subject, topic, subTopic };
-  });
-
-  if (!groupsAdded && !questionsAdded) return { groupsAdded, questionsAdded };
-
-  state.grouped = groupData(state.rawData, state.emptyGroups);
-  persistCurrentProgress();
-  refreshFilterOptions();
-  if (lastQid) state.pendingFocusQid = lastQid;
-  render();
-  restoreOpenState(openState);
-  if (lastQid) {
-    highlightMovedQuestion(lastQid);
-  } else if (lastGroup) {
-    highlightNewGroup(lastGroup.subject, lastGroup.topic, lastGroup.subTopic);
-  }
-
-  const parts = [];
-  if (groupsAdded) parts.push(groupsAdded + " group(s)");
-  if (questionsAdded) parts.push(questionsAdded + " question(s)");
-  showSuccessAlert(parts.join(" and ") + " added.");
-
-  return { groupsAdded, questionsAdded };
-}
-
 function highlightNewGroup(subject, topic, subTopic) {
   requestAnimationFrame(() => {
     const item = expandGroupChain(subject, topic, subTopic);
@@ -300,123 +163,368 @@ function highlightNewGroup(subject, topic, subTopic) {
   });
 }
 
-export function createQuickAddButton(label, onClick) {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "btn btn-sm btn-outline-primary quick-add-row mb-2";
-  btn.textContent = label;
-  btn.addEventListener("click", onClick);
-  return btn;
+// Requirement: standardized CSV columns for the "+ Bulk Add (CSV)" / "+ Bulk Copy (CSV)" /
+// "+ Bulk Update (CSV)" trio — real comma-separated CSV (Papa's default delimiter) with a header
+// row. Same shape buildQuestionsCsv() (api.js) already produces for #copyProgressCsvBtn/the whole
+// file, so a Bulk Copy export from any level pastes straight into Bulk Add/Update at any level.
+const BULK_CSV_COLUMNS = ["Subject", "Topic", "SubTopic", "Question", "Answer", "Done", "ReviewLater", "LessImportant", "Starred"];
+
+// Loose header-name match — case-insensitive and ignoring spaces/underscores/hyphens — so both
+// "ReviewLater" and "Review Later" (or "Less Important"/"LessImportant") match the same column.
+function normalizeHeaderName(name) {
+  return (name || "").trim().toLowerCase().replace(/[\s_-]+/g, "");
 }
 
-// Requirement: default <textarea> Tab behavior shifts focus to the next control, which fights
-// every tab-separated bulk-add textarea in this file — typing a row by hand needs a literal tab
-// between fields, not a focus jump. Intercept Tab (and Shift+Tab, same as Tab here — there's no
-// existing indentation to outdent) and insert a real tab character at the caret instead, then
-// restore the caret position right after it so typing can continue immediately.
-function enableTabCharacterInsertion(textarea) {
-  textarea.addEventListener("keydown", (e) => {
-    if (e.key !== "Tab") return;
-    e.preventDefault();
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    textarea.value = textarea.value.slice(0, start) + "\t" + textarea.value.slice(end);
-    textarea.selectionStart = textarea.selectionEnd = start + 1;
+// Column lookup against Papa.parse's header:true `meta.fields` — lets a pasted CSV list its
+// columns in any order, spelled with or without spaces, or omit ones this scope's fixed context
+// already supplies.
+function bulkCsvFieldLookup(fields) {
+  const found = {};
+  BULK_CSV_COLUMNS.forEach(name => {
+    const target = normalizeHeaderName(name);
+    found[name] = (fields || []).find(f => normalizeHeaderName(f) === target);
+  });
+  return found;
+}
+
+// Parses a pasted CSV block (header row required) into { rows } or { error }. Each row already
+// has Subject/Topic/SubTopic resolved and Done/ReviewLater/LessImportant/Starred coerced to
+// booleans via toBool() — bulkAddQuestionsCsv()/bulkUpdateQuestionsCsv() below just decide what
+// to do with each resolved row. Rows with no Question text are dropped — they can't create or
+// match anything.
+//
+// Requirement: a blank Subject/Topic/SubTopic cell inherits that column's value from the
+// previous row, not just this toolbar's fixed scope — lets a paste list a Subject/Topic/SubTopic
+// once and leave every following row's matching cell(s) blank until a new value is given, while
+// trailing/middle commas still line up with the right column (header-based parsing, not
+// position-based, so column count never has to match across rows). Each of Subject/Topic/SubTopic
+// tracks its own last non-blank value independently — setting a new Topic on a row does NOT reset
+// whatever SubTopic was last seen; a row leaving SubTopic blank always reuses the last SubTopic
+// value seen, whichever row it came from. `scope`'s own fixed value seeds the very first row.
+function parseBulkQuestionsCsv(rawText, scope) {
+  const parsed = Papa.parse(rawText.trim(), { header: true, skipEmptyLines: true });
+  if (parsed.errors && parsed.errors.length) {
+    return { error: "Could not parse that text: " + parsed.errors[0].message };
+  }
+  if (!parsed.meta.fields || !parsed.meta.fields.some(f => normalizeHeaderName(f) === "question")) {
+    return { error: "First row must be a header row with at least a \"Question\" column — e.g. " + BULK_CSV_COLUMNS.join(",") };
+  }
+  const keys = bulkCsvFieldLookup(parsed.meta.fields);
+
+  let lastSubject = scope.Subject || "";
+  let lastTopic = scope.Topic || "";
+  let lastSubTopic = scope.SubTopic || "";
+
+  const rows = parsed.data.map(row => {
+    const rawSubject = keys.Subject ? (row[keys.Subject] || "").trim() : "";
+    const rawTopic = keys.Topic ? (row[keys.Topic] || "").trim() : "";
+    const rawSubTopic = keys.SubTopic ? (row[keys.SubTopic] || "").trim() : "";
+    if (rawSubject) lastSubject = rawSubject;
+    if (rawTopic) lastTopic = rawTopic;
+    if (rawSubTopic) lastSubTopic = rawSubTopic;
+
+    return {
+      Subject: lastSubject,
+      Topic: lastTopic,
+      SubTopic: lastSubTopic,
+      Question: keys.Question ? (row[keys.Question] || "").trim() : "",
+      Answer: keys.Answer ? (row[keys.Answer] || "") : "",
+      Done: toBool(keys.Done && row[keys.Done]),
+      ReviewLater: toBool(keys.ReviewLater && row[keys.ReviewLater]),
+      LessImportant: toBool(keys.LessImportant && row[keys.LessImportant]),
+      Starred: toBool(keys.Starred && row[keys.Starred])
+    };
+  }).filter(r => r.Question);
+  return { rows };
+}
+
+// Requirement: "+ Bulk Add (CSV)" — creates a new question per row (Subject/Topic/SubTopic
+// resolved per parseBulkQuestionsCsv() above), silently skipping any row whose Subject+Topic+
+// SubTopic+Question already exists (same case-insensitive questionExistsIn() dedup every other
+// add path in this file uses) rather than erroring the whole paste out.
+function bulkAddQuestionsCsv(scope, rawText) {
+  const { rows, error } = parseBulkQuestionsCsv(rawText, scope);
+  if (error) return { error };
+  return withHistory(() => {
+    let added = 0, lastQid = null, lastGroup = null;
+    rows.forEach(r => {
+      if (!r.Subject || !r.Topic || !r.SubTopic) return; // needs a full hierarchy to create a question
+      const siblings = state.rawData.filter(x => x.Subject === r.Subject && x.Topic === r.Topic && x.SubTopic === r.SubTopic);
+      if (questionExistsIn(siblings, r.Question)) return;
+      const ord = getExistingOrder(r.Subject, r.Topic, r.SubTopic);
+      const newQ = {
+        Subject: r.Subject, Topic: r.Topic, SubTopic: r.SubTopic,
+        Question: r.Question, Answer: r.Answer,
+        Done: r.Done, ReviewLater: r.ReviewLater, Duplicate: false,
+        LessImportant: r.LessImportant, Starred: r.Starred,
+        Order: nextQuestionOrder(r.Subject, r.Topic, r.SubTopic),
+        SubjectOrder: ord.subjectOrder, TopicOrder: ord.topicOrder, SubTopicOrder: ord.subTopicOrder,
+        _id: uid("q")
+      };
+      state.rawData.push(newQ);
+      added++;
+      lastQid = newQ._id;
+      lastGroup = { subject: r.Subject, topic: r.Topic, subTopic: r.SubTopic };
+    });
+    return { added, lastQid, lastGroup };
   });
 }
 
-// Requirement: a shared "quick-copy/edit" link for any tab-separated bulk-add textarea — copies
-// a sample row to the clipboard AND appends it as a new line in the textarea itself, ready to
-// edit in place, instead of making the user retype the column order from the hint text above it.
-function createBulkTemplateLink(textarea, templateRow) {
-  const link = document.createElement("a");
-  link.href = "#";
-  link.className = "small d-inline-block mb-1";
-  link.textContent = "Copy/insert sample row";
-  link.title = "Copies a sample tab-separated row (" + templateRow.split("\t").join(" / ") + ") to the clipboard and inserts it below for editing";
-  link.addEventListener("click", (e) => {
-    e.preventDefault();
-    const sep = textarea.value && !textarea.value.endsWith("\n") ? "\n" : "";
-    textarea.value += sep + templateRow;
-    navigator.clipboard.writeText(templateRow).catch(() => { });
-    textarea.focus();
+// Requirement: "+ Bulk Update (CSV)" — matches each row against an existing question by
+// Subject+Topic+SubTopic+Question (case-insensitive), overwriting its Answer and status flags in
+// place. A row that doesn't match anything existing is added as new instead (same creation logic
+// as bulkAddQuestionsCsv()), so nothing pasted is silently dropped.
+function bulkUpdateQuestionsCsv(scope, rawText) {
+  const { rows, error } = parseBulkQuestionsCsv(rawText, scope);
+  if (error) return { error };
+  return withHistory(() => {
+    const norm = t => (t || "").trim().toLowerCase();
+    let updated = 0, added = 0, lastQid = null, lastGroup = null;
+    rows.forEach(r => {
+      if (!r.Subject || !r.Topic || !r.SubTopic) return;
+      const existing = state.rawData.find(x =>
+        x.Subject === r.Subject && x.Topic === r.Topic && x.SubTopic === r.SubTopic && norm(x.Question) === norm(r.Question));
+      if (existing) {
+        existing.Question = r.Question;
+        existing.Answer = r.Answer;
+        existing.Done = r.Done;
+        existing.ReviewLater = r.ReviewLater;
+        existing.LessImportant = r.LessImportant;
+        existing.Starred = r.Starred;
+        updated++;
+        lastQid = existing._id;
+        lastGroup = { subject: r.Subject, topic: r.Topic, subTopic: r.SubTopic };
+      } else {
+        const ord = getExistingOrder(r.Subject, r.Topic, r.SubTopic);
+        const newQ = {
+          Subject: r.Subject, Topic: r.Topic, SubTopic: r.SubTopic,
+          Question: r.Question, Answer: r.Answer,
+          Done: r.Done, ReviewLater: r.ReviewLater, Duplicate: false,
+          LessImportant: r.LessImportant, Starred: r.Starred,
+          Order: nextQuestionOrder(r.Subject, r.Topic, r.SubTopic),
+          SubjectOrder: ord.subjectOrder, TopicOrder: ord.topicOrder, SubTopicOrder: ord.subTopicOrder,
+          _id: uid("q")
+        };
+        state.rawData.push(newQ);
+        added++;
+        lastQid = newQ._id;
+        lastGroup = { subject: r.Subject, topic: r.Topic, subTopic: r.SubTopic };
+      }
+    });
+    return { updated, added, lastQid, lastGroup };
   });
-  return link;
 }
 
-// Requirement: a toggleable "+ Bulk Add New ..." panel — a textarea, one row per group/question,
-// tab-separated fields for whatever hierarchy depth isn't already fixed by context. Thin UI shell
-// now: all parsing/dedup/creation lives in bulkAddHierarchy(), so onAddRaw is just that function
-// (or a wrapper around it) called with the raw textarea text; the panel only clears/hides itself
-// once onAddRaw reports at least one thing was actually added (0/0 leaves the draft in place so
-// the user can fix a typo rather than losing their paste). `placeholder`/`templateRow` are both
-// optional — omit either to skip that affordance for a given caller.
-export function createBulkAddGroupButton(label, hint, onAddRaw, placeholder, templateRow) {
+// Shared "commit" step for both bulkAddQuestionsCsv() and bulkUpdateQuestionsCsv() results —
+// persist, re-render, restore whatever was already open, then jump to/highlight the result.
+function commitBulkQuestionsCsvChange(lastQid, lastGroup) {
+  state.grouped = groupData(state.rawData, state.emptyGroups);
+  persistCurrentProgress();
+  refreshFilterOptions();
+  const openState = captureOpenState();
+  if (lastQid) state.pendingFocusQid = lastQid;
+  render();
+  restoreOpenState(openState);
+  if (lastQid) highlightMovedQuestion(lastQid);
+  else if (lastGroup) highlightNewGroup(lastGroup.subject, lastGroup.topic, lastGroup.subTopic);
+}
+
+// Requirement: "+ Bulk Copy (CSV)" — exports whatever getRows()/getEmptyGroups() cover right now
+// to the clipboard, via buildQuestionsCsv() (api.js) — the exact same row-shaping
+// #copyProgressCsvBtn/downloadProgress use for the whole file, just pre-filtered to that scope.
+// Standalone (not just baked into createBulkQuestionCsvTools below) so Subject/Topic/SubTopic
+// levels can each get their own scoped Copy button — genuinely useful at every level, since
+// exporting "just this Subject" or "just this SubTopic" isn't something the root-level trio can
+// do — without the redundant Add/Update panels, which the root-level trio already covers for
+// every level (each CSV row carries its own Subject/Topic/SubTopic).
+function createBulkCopyCsvButton(getRows, getEmptyGroups) {
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.className = "btn btn-sm btn-outline-secondary";
+  copyBtn.textContent = "+ Bulk Copy (CSV)";
+  copyBtn.addEventListener("click", () => {
+    const rows = getRows();
+    const emptyGroups = getEmptyGroups ? getEmptyGroups() : [];
+    if (!rows.length && !emptyGroups.length) {
+      alert("No questions to copy.");
+      return;
+    }
+    const csv = buildQuestionsCsv(rows, emptyGroups);
+    navigator.clipboard.writeText(csv).then(() => {
+      showSuccessAlert(rows.length + " question(s) copied to clipboard.");
+    }).catch(() => {
+      alert("Copy failed — clipboard access may be blocked by the browser.");
+    });
+  });
+  return copyBtn;
+}
+
+// Requirement: one shared "+ Bulk Add (CSV)" / "+ Bulk Copy (CSV)" / "+ Bulk Update (CSV)"
+// toolbar, reused identically at the root (global), Subject, Topic, and SubTopic levels — same
+// CSV column shape everywhere (BULK_CSV_COLUMNS above), so a Bulk Copy export from any level can
+// be edited and pasted straight into Bulk Add/Update at any other level without reshaping.
+// `scope` pins whichever of {Subject, Topic, SubTopic} this toolbar lives under (all null at the
+// root); a blank/omitted cell in that column on a pasted row falls back to the pinned value.
+// `getRows()`/`getEmptyGroups()` are thunks (re-queried on every Bulk Copy click, same pattern
+// createGroupSelectionUI() above uses for its checkboxes) returning whatever this toolbar's scope
+// covers right now. Bulk Copy reuses buildQuestionsCsv() (api.js) — the exact same row-shaping
+// #copyProgressCsvBtn/downloadProgress use for the whole file — just pre-filtered to that scope.
+export function createBulkQuestionCsvTools(scope, getRows, getEmptyGroups) {
+  // `toolbar` holds just the three buttons — callers that need every select/bulk-action button
+  // "side-by-side in a single row" (root/Subject/Topic controls rows, and the SubTopic-level
+  // question Select/Select All buttons) append their own buttons into this same element instead
+  // of using `wrap` directly. `panelsWrap` holds the Add/Update textareas, which stay on their
+  // own row below whatever row `toolbar` ends up in.
+  const toolbar = document.createElement("div");
+  toolbar.className = "d-flex align-items-start flex-wrap gap-2";
+
+  const panelsWrap = document.createElement("div");
+  panelsWrap.className = "mb-2";
+
   const wrap = document.createElement("div");
-  wrap.className = "mb-2 quick-add-row";
+  wrap.className = "quick-add-row";
+  wrap.appendChild(toolbar);
+  wrap.appendChild(panelsWrap);
 
-  const toggleBtn = document.createElement("button");
-  toggleBtn.type = "button";
-  toggleBtn.className = "btn btn-sm btn-outline-secondary mb-2";
-  toggleBtn.textContent = label;
-  wrap.appendChild(toggleBtn);
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "btn btn-sm btn-outline-secondary";
+  addBtn.textContent = "+ Bulk Add (CSV)";
 
-  const panel = document.createElement("div");
-  panel.className = "add-question-panel";
-  panel.style.display = "none";
-  wrap.appendChild(panel);
+  const copyBtn = createBulkCopyCsvButton(getRows, getEmptyGroups);
 
-  const hintEl = document.createElement("div");
-  hintEl.className = "small text-muted mb-1";
-  hintEl.textContent = hint;
-  panel.appendChild(hintEl);
+  const updateBtn = document.createElement("button");
+  updateBtn.type = "button";
+  updateBtn.className = "btn btn-sm btn-outline-secondary";
+  updateBtn.textContent = "+ Bulk Update (CSV)";
 
-  const textarea = document.createElement("textarea");
-  textarea.className = "form-control form-control-sm mb-2";
-  textarea.rows = 5;
-  if (placeholder) textarea.placeholder = placeholder;
-  enableTabCharacterInsertion(textarea);
+  toolbar.appendChild(addBtn);
+  toolbar.appendChild(copyBtn);
+  toolbar.appendChild(updateBtn);
 
-  if (templateRow) panel.appendChild(createBulkTemplateLink(textarea, templateRow));
-  panel.appendChild(textarea);
+  const scopeNoun = scope.SubTopic ? "SubTopic" : scope.Topic ? "Topic" : scope.Subject ? "Subject" : null;
 
-  const actions = document.createElement("div");
-  const addAllBtn = document.createElement("button");
-  addAllBtn.type = "button";
-  addAllBtn.className = "btn btn-sm btn-success me-2";
-  addAllBtn.textContent = "Add All";
-  const cancelBtn = document.createElement("button");
-  cancelBtn.type = "button";
-  cancelBtn.className = "btn btn-sm btn-outline-secondary";
-  cancelBtn.textContent = "Cancel";
-  actions.appendChild(addAllBtn);
-  actions.appendChild(cancelBtn);
-  panel.appendChild(actions);
+  function sampleRowFor(action) {
+    return [
+      scope.Subject || "Sample Subject",
+      scope.Topic || "Sample Topic",
+      scope.SubTopic || "Sample SubTopic",
+      action === "update" ? "Existing question text (matched exactly, case-insensitive)" : "Sample question text",
+      "Sample answer (HTML allowed)",
+      "false", "false", "false", "false"
+    ];
+  }
 
-  toggleBtn.addEventListener("click", () => {
-    panel.style.display = panel.style.display === "none" ? "block" : "none";
-  });
-
-  cancelBtn.addEventListener("click", () => {
-    textarea.value = "";
+  function buildPanel(action, verb, onSubmit) {
+    const panel = document.createElement("div");
+    panel.className = "add-question-panel";
     panel.style.display = "none";
+
+    const hint = document.createElement("div");
+    hint.className = "small text-muted mb-1";
+    hint.textContent = "Comma-separated CSV, first row must be a header: " + BULK_CSV_COLUMNS.join(",") +
+      ". Columns can appear in any order" +
+      (scopeNoun ? "; leave Subject/Topic/SubTopic blank to use this " + scopeNoun + "." : ".") +
+      " A blank Subject/Topic/SubTopic cell reuses that column's last non-blank value from a row above it, so you only have to write each one once when several rows in a row share it." +
+      (action === "update" ? " Rows matching an existing question (by Subject/Topic/SubTopic/Question) update it in place; unmatched rows are added as new." : "");
+
+    const textarea = document.createElement("textarea");
+    textarea.className = "form-control form-control-sm mb-2";
+    textarea.rows = 6;
+    textarea.placeholder = BULK_CSV_COLUMNS.join(",");
+
+    const headerLine = BULK_CSV_COLUMNS.join(",");
+    const sampleLine = Papa.unparse([sampleRowFor(action)]);
+    const templateLink = document.createElement("a");
+    templateLink.href = "#";
+    templateLink.className = "small d-inline-block mb-1";
+    templateLink.textContent = "Copy/insert sample row";
+    templateLink.title = "Copies a sample CSV row (with header) to the clipboard and inserts it below for editing";
+    templateLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      const needsHeader = !textarea.value.trim();
+      const insertion = (needsHeader ? headerLine + "\n" : "") + sampleLine;
+      const sep = textarea.value && !textarea.value.endsWith("\n") ? "\n" : "";
+      textarea.value += sep + insertion;
+      navigator.clipboard.writeText(insertion).catch(() => { });
+      textarea.focus();
+    });
+
+    const actions = document.createElement("div");
+    const submitBtn = document.createElement("button");
+    submitBtn.type = "button";
+    submitBtn.className = "btn btn-sm btn-success me-2";
+    submitBtn.textContent = verb;
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "btn btn-sm btn-outline-secondary";
+    cancelBtn.textContent = "Cancel";
+    actions.appendChild(submitBtn);
+    actions.appendChild(cancelBtn);
+
+    panel.appendChild(hint);
+    panel.appendChild(templateLink);
+    panel.appendChild(textarea);
+    panel.appendChild(actions);
+
+    cancelBtn.addEventListener("click", () => {
+      textarea.value = "";
+      panel.style.display = "none";
+    });
+
+    submitBtn.addEventListener("click", () => {
+      if (!textarea.value.trim()) {
+        alert("Paste at least one CSV row first.");
+        return;
+      }
+      const ok = onSubmit(textarea.value);
+      if (!ok) return; // onSubmit already alerted why — leave the draft in place to fix and retry
+      textarea.value = "";
+      panel.style.display = "none";
+    });
+
+    return panel;
+  }
+
+  const addPanel = buildPanel("add", "Add All", rawText => {
+    const result = bulkAddQuestionsCsv(scope, rawText);
+    if (result.error) { alert(result.error); return false; }
+    if (!result.added) { alert("No new rows to add (all blank, duplicate, or missing Subject/Topic/SubTopic)."); return false; }
+    commitBulkQuestionsCsvChange(result.lastQid, result.lastGroup);
+    showSuccessAlert(result.added + " question(s) added.");
+    return true;
   });
 
-  addAllBtn.addEventListener("click", () => {
-    if (!textarea.value.trim()) {
-      alert("Nothing to add.");
-      return;
-    }
-    const result = onAddRaw(textarea.value);
-    if (!result || (!result.groupsAdded && !result.questionsAdded)) {
-      alert("No new rows to add (all blank, duplicate, or already exist).");
-      return;
-    }
-    textarea.value = "";
-    panel.style.display = "none";
+  const updatePanel = buildPanel("update", "Update All", rawText => {
+    const result = bulkUpdateQuestionsCsv(scope, rawText);
+    if (result.error) { alert(result.error); return false; }
+    if (!result.updated && !result.added) { alert("No valid rows found (need at least a Question column, plus Subject/Topic/SubTopic)."); return false; }
+    commitBulkQuestionsCsvChange(result.lastQid, result.lastGroup);
+    showSuccessAlert(result.updated + " updated, " + result.added + " added.");
+    return true;
   });
 
-  return wrap;
+  function closeAll() {
+    addPanel.style.display = "none";
+    updatePanel.style.display = "none";
+  }
+
+  addBtn.addEventListener("click", () => {
+    const opening = addPanel.style.display === "none";
+    closeAll();
+    addPanel.style.display = opening ? "block" : "none";
+  });
+
+  updateBtn.addEventListener("click", () => {
+    const opening = updatePanel.style.display === "none";
+    closeAll();
+    updatePanel.style.display = opening ? "block" : "none";
+  });
+
+  panelsWrap.appendChild(addPanel);
+  panelsWrap.appendChild(updatePanel);
+
+  return { wrap, toolbar, panelsWrap, closeAll };
 }
 
 // Requirement: consistent selection controls (individual checkbox, Select/Done Selecting,
@@ -650,20 +758,25 @@ export function render() {
   );
   const subjectSelectionCtx = { selectedNames: subjectSelectionUI.selectedNames, onChange: subjectSelectionUI.updateBulkBar };
 
-  // Requirement: no standalone "+ Add New Subject" — the bulk-add textarea already accepts a
-  // single line/entry just fine, so it's the one way to add a Subject now. Its toggle button
-  // shares one row with Select/Select All (the bulk-add panel itself still unfolds below).
-  const subjectBulkAdd = createBulkAddGroupButton(
-    "+ Bulk Add New Subjects",
-    "One row per line, tab-separated: Subject [Topic] [SubTopic] [Question] [Answer]. Trailing fields are optional.",
-    rawText => bulkAddHierarchy(null, null, rawText)
+  // Requirement: the ONLY "+ Bulk Add (CSV)" / "+ Bulk Copy (CSV)" / "+ Bulk Update (CSV)" trio
+  // in the whole tree, kept here under #rootAccordion — each row carries its own Subject/Topic/
+  // SubTopic (with carry-forward for blank cells, see parseBulkQuestionsCsv() above), so this one
+  // toolbar already covers every Subject/Topic/SubTopic/question; Subject/Topic/SubTopic levels
+  // below only get Select/Select All, not a redundant copy of this toolbar. Its own toolbar
+  // shares one row with Select/Select All (all select/bulk-action buttons side-by-side); the Add/
+  // Update textareas still unfold on their own row below via csvTools.panelsWrap.
+  const csvTools = createBulkQuestionCsvTools(
+    { Subject: null, Topic: null, SubTopic: null },
+    () => state.rawData,
+    () => state.emptyGroups
   );
   const subjectControlsRow = document.createElement("div");
   subjectControlsRow.className = "d-flex align-items-start flex-wrap gap-2 mb-2 quick-add-row";
-  subjectControlsRow.appendChild(subjectBulkAdd);
+  subjectControlsRow.appendChild(csvTools.toolbar);
   subjectControlsRow.appendChild(subjectSelectionUI.selectToggleBtn);
   subjectControlsRow.appendChild(subjectSelectionUI.selectAllBtn);
   root.appendChild(subjectControlsRow);
+  root.appendChild(csvTools.panelsWrap);
   root.appendChild(subjectSelectionUI.bulkBar);
   subjectSelectionUI.selectToggleBtn.addEventListener("click", () => subjectSelectionUI.toggleSelectingOn(subjectAccordion));
 
@@ -708,6 +821,33 @@ export function render() {
     }
     // fall through to the normal state.scrollTargetEl handling below if the question wasn't found
     // (e.g. hidden by an active filter)
+  }
+
+  // Requirement: on page load/refresh, if a globally-flagged active question exists and is
+  // reachable under the current filters, auto-expand its chain and scroll to it — same
+  // "expand ancestors only, leave answer body collapsed" behavior as clicking the active-question
+  // breadcrumb link (appendActiveQuestionBreadcrumbLink(), above). Only fires once per load:
+  // initApp()/api.js sets the flag before the first render(); it's cleared here regardless of
+  // whether a match was found so later re-renders (filtering, editing, etc.) don't re-trigger it.
+  if (state.pendingActiveQuestionScroll) {
+    state.pendingActiveQuestionScroll = false;
+    const active = state.activeQuestion;
+    if (active && !focusing) {
+      const match = state.rawData.find(r =>
+        r.Subject === active.Subject && r.Topic === active.Topic &&
+        r.SubTopic === active.SubTopic && r.Question === active.Question
+      );
+      if (match) {
+        const qItem = expandToQuestion(match._id);
+        if (qItem) {
+          requestAnimationFrame(() => {
+            qItem.scrollIntoView({ behavior: "smooth", block: "center" });
+            flashHighlightItem(qItem);
+          });
+          return;
+        }
+      }
+    }
   }
 
   if (state.scrollTargetEl) {
@@ -1110,19 +1250,21 @@ export function bulkToggleQuestionStatus(qids, field, label) {
     const proceed = confirm("One or more selected questions already have an answer filled in. Marking them Duplicate excludes them from the exported Progress CSV, so that content could effectively be lost. Continue?");
     if (!proceed) return;
   }
-  const openState = captureOpenState();
-  const scrollY = window.scrollY;
-  targets.forEach(q => {
-    q[field] = !q[field];
-    if (field === "Done" && q.Done) q.ReviewLater = false;
-    if (field === "ReviewLater" && q.ReviewLater) q.Done = false;
+  withHistory(() => {
+    const openState = captureOpenState();
+    const scrollY = window.scrollY;
+    targets.forEach(q => {
+      q[field] = !q[field];
+      if (field === "Done" && q.Done) q.ReviewLater = false;
+      if (field === "ReviewLater" && q.ReviewLater) q.Done = false;
+    });
+    state.grouped = groupData(state.rawData, state.emptyGroups);
+    persistCurrentProgress();
+    render();
+    restoreOpenState(openState);
+    restoreScrollAfter(scrollY);
+    showSuccessAlert(label + " toggled for " + targets.length + " question(s).");
   });
-  state.grouped = groupData(state.rawData, state.emptyGroups);
-  persistCurrentProgress();
-  render();
-  restoreOpenState(openState);
-  restoreScrollAfter(scrollY);
-  showSuccessAlert(label + " toggled for " + targets.length + " question(s).");
 }
 
 // Requirement: an icon-only copy button for the Subject accordion that flattens every
@@ -1425,16 +1567,16 @@ export function createSubject(subject, topics, parentId, isTarget, selectionCtx)
     topicAccordion.appendChild(topicItem);
   });
 
-  // Requirement: "+ Add New Topic", "+ Bulk Add New Topics", and Select share one row.
+  // Requirement: the root-level "+ Bulk Add (CSV)" / "+ Bulk Update (CSV)" (render(), under
+  // #rootAccordion) already cover every Subject/Topic/SubTopic/question — each row carries its
+  // own hierarchy — so this level doesn't need its own redundant copies of those two. "+ Bulk
+  // Copy (CSV)" stays here, though — exporting "just this Subject" is genuinely scoped, unlike
+  // Add/Update, which the root-level trio already handles regardless of level.
   const topicControlsRow = document.createElement("div");
   topicControlsRow.className = "d-flex align-items-start flex-wrap gap-2 mb-2 quick-add-row";
-  topicControlsRow.appendChild(createQuickAddButton("+ Add New Topic", () => quickAddTopic(subject)));
-  topicControlsRow.appendChild(createBulkAddGroupButton(
-    "+ Bulk Add New Topics",
-    "One row per line, tab-separated: Topic [SubTopic] [Question] [Answer]. Trailing fields are optional.",
-    rawText => bulkAddHierarchy(subject, null, rawText),
-    "topic",
-    "Topic\tSubTopic\tQuestion\tAnswer"
+  topicControlsRow.appendChild(createBulkCopyCsvButton(
+    () => state.rawData.filter(r => r.Subject === subject),
+    () => state.emptyGroups.filter(g => g.Subject === subject)
   ));
   topicControlsRow.appendChild(topicSelectionUI.selectToggleBtn);
   topicControlsRow.appendChild(topicSelectionUI.selectAllBtn);
@@ -1591,16 +1733,13 @@ export function createTopic(subject, topic, subTopics, parentId, isTarget, selec
     subTopicAccordion.appendChild(subTopicItem);
   });
 
-  // Requirement: "+ Add New SubTopic", "+ Bulk Add New SubTopics", and Select share one row.
+  // Requirement: the root-level "+ Bulk Add (CSV)" / "+ Bulk Update (CSV)" already cover this
+  // Topic's questions too — just its own scoped "+ Bulk Copy (CSV)" plus Select/Select All here.
   const subTopicControlsRow = document.createElement("div");
   subTopicControlsRow.className = "d-flex align-items-start flex-wrap gap-2 mb-2 quick-add-row";
-  subTopicControlsRow.appendChild(createQuickAddButton("+ Add New SubTopic", () => quickAddSubTopic(subject, topic)));
-  subTopicControlsRow.appendChild(createBulkAddGroupButton(
-    "+ Bulk Add New SubTopics",
-    "One row per line, tab-separated: SubTopic [Question] [Answer]. Trailing fields are optional.",
-    rawText => bulkAddHierarchy(subject, topic, rawText),
-    "subtopic",
-    "SubTopic\tQuestion\tAnswer"
+  subTopicControlsRow.appendChild(createBulkCopyCsvButton(
+    () => state.rawData.filter(r => r.Subject === subject && r.Topic === topic),
+    () => state.emptyGroups.filter(g => g.Subject === subject && g.Topic === topic)
   ));
   subTopicControlsRow.appendChild(subTopicSelectionUI.selectToggleBtn);
   subTopicControlsRow.appendChild(subTopicSelectionUI.selectAllBtn);
@@ -1634,350 +1773,6 @@ export function createTopic(subject, topic, subTopics, parentId, isTarget, selec
   });
 
   return item;
-}
-
-export function createAddQuestionPanel(subject, topic, subTopic, questions) {
-  const wrap = document.createElement("div");
-  wrap.className = "add-question-wrap mt-2";
-
-  const toolbar = document.createElement("div");
-  toolbar.className = "d-flex gap-2 mb-2";
-
-  const addBtn = document.createElement("button");
-  addBtn.type = "button";
-  addBtn.className = "btn btn-sm btn-outline-primary";
-  addBtn.textContent = "+ Add Question";
-
-  const bulkBtn = document.createElement("button");
-  bulkBtn.type = "button";
-  bulkBtn.className = "btn btn-sm btn-outline-secondary";
-  bulkBtn.textContent = "+ Bulk Add (CSV)";
-
-  toolbar.appendChild(addBtn);
-  toolbar.appendChild(bulkBtn);
-  wrap.appendChild(toolbar);
-
-  /* ---- Single add form ---- */
-  const singlePanel = document.createElement("div");
-  singlePanel.className = "add-question-panel";
-  singlePanel.style.display = "none";
-
-  const qInput = document.createElement("textarea");
-  qInput.className = "form-control form-control-sm mb-2";
-  qInput.rows = 2;
-  qInput.placeholder = "Question text...";
-
-  /* Requirement: fuzzy-duplicate hints — as the user types, surface existing questions
-     (anywhere in the dataset) that share a significant word; clicking one jumps to it. */
-  const fuzzyHint = document.createElement("div");
-  fuzzyHint.className = "small text-muted mb-2";
-  fuzzyHint.style.display = "none";
-
-  const aInput = document.createElement("textarea");
-  aInput.className = "form-control form-control-sm mb-2";
-  aInput.rows = 3;
-  aInput.placeholder = "Answer (HTML allowed)...";
-
-  function renderFuzzyHint() {
-    populateFuzzyHint(fuzzyHint, qInput.value, {
-      jumpBack: () => {
-        requestAnimationFrame(() => wrap.scrollIntoView({ behavior: "smooth", block: "center" }));
-        qInput.focus();
-        flashHighlightItem(wrap);
-      },
-      // Requirement: "Add anyway" does NOT save automatically, and doesn't just bounce back
-      // to this draft either — it opens and pre-fills the TARGET question's own SubTopic's add
-      // panel with this draft, so the user saves it right alongside the question they just
-      // reviewed (see openSubTopicAddPanelPrefilled).
-      addAnyway: targetItem => {
-        const openedWrap = openSubTopicAddPanelPrefilled(targetItem, qInput.value, aInput.value);
-        if (!openedWrap) return;
-        requestAnimationFrame(() => openedWrap.scrollIntoView({ behavior: "smooth", block: "center" }));
-        flashHighlightItem(openedWrap);
-      },
-      // Requirement: "Add Question After" auto-saves the draft directly after the matched
-      // question, in ITS SubTopic (not this panel where the draft was typed), then jumps to it.
-      addAfter: matchedQ => addQuestionAfterMatch(matchedQ, qInput.value, aInput.value, draft)
-    });
-  }
-
-  qInput.addEventListener("input", renderFuzzyHint);
-
-  const draft = { Done: false, ReviewLater: false, Duplicate: false, LessImportant: false, Starred: false };
-  const iconRow = document.createElement("div");
-  iconRow.className = "status-icon-row";
-
-  let doneT, reviewT;
-  doneT = createStatusIconToggle({
-    key: "done", icon: "fa-solid fa-check", label: "Done", initial: false,
-    onToggle: active => {
-      draft.Done = active;
-      if (active && reviewT.classList.contains("is-active")) {
-        reviewT.classList.remove("is-active");
-        reviewT.setAttribute("aria-pressed", "false");
-        draft.ReviewLater = false;
-      }
-    }
-  });
-  reviewT = createStatusIconToggle({
-    key: "review", icon: "fa-solid fa-clock", label: "Review Later", initial: false,
-    onToggle: active => {
-      draft.ReviewLater = active;
-      if (active && doneT.classList.contains("is-active")) {
-        doneT.classList.remove("is-active");
-        doneT.setAttribute("aria-pressed", "false");
-        draft.Done = false;
-      }
-    }
-  });
-  const dupT = createStatusIconToggle({ key: "duplicate", icon: "fa-solid fa-clone", label: "Duplicate", initial: false, onToggle: a => { draft.Duplicate = a; } });
-  const lessT = createStatusIconToggle({ key: "less", icon: "fa-solid fa-down-long", label: "Less Important", initial: false, onToggle: a => { draft.LessImportant = a; } });
-  const starT = createStatusIconToggle({ key: "star", icon: "fa-solid fa-star", label: "Starred", initial: false, onToggle: a => { draft.Starred = a; } });
-
-  [doneT, reviewT, dupT, lessT, starT].forEach(b => iconRow.appendChild(b));
-
-  const singleActions = document.createElement("div");
-  const saveSingleBtn = document.createElement("button");
-  saveSingleBtn.type = "button";
-  saveSingleBtn.className = "btn btn-sm btn-success me-2";
-  saveSingleBtn.textContent = "Save Question";
-  const cancelSingleBtn = document.createElement("button");
-  cancelSingleBtn.type = "button";
-  cancelSingleBtn.className = "btn btn-sm btn-outline-secondary";
-  cancelSingleBtn.textContent = "Cancel";
-  singleActions.appendChild(saveSingleBtn);
-  singleActions.appendChild(cancelSingleBtn);
-
-  singlePanel.appendChild(qInput);
-  singlePanel.appendChild(fuzzyHint);
-  singlePanel.appendChild(aInput);
-  singlePanel.appendChild(iconRow);
-  singlePanel.appendChild(singleActions);
-
-  function resetSingleForm() {
-    qInput.value = "";
-    aInput.value = "";
-    renderFuzzyHint();
-    [doneT, reviewT, dupT, lessT, starT].forEach(b => {
-      b.classList.remove("is-active");
-      b.setAttribute("aria-pressed", "false");
-    });
-    draft.Done = draft.ReviewLater = draft.Duplicate = draft.LessImportant = draft.Starred = false;
-  }
-
-  addBtn.addEventListener("click", () => {
-    bulkPanel.style.display = "none";
-    singlePanel.style.display = singlePanel.style.display === "none" ? "block" : "none";
-  });
-
-  cancelSingleBtn.addEventListener("click", () => {
-    resetSingleForm();
-    singlePanel.style.display = "none";
-  });
-
-  /* Shared save logic for both "Save Question" and "Save & Add". Returns
-     { ok:true, newQ } on success, or { ok:false, reason:"empty"|"duplicate" }. */
-  function trySaveQuestion(questionText, answerText) {
-    const text = (questionText || "").trim();
-    if (!text) return { ok: false, reason: "empty" };
-    if (questionExistsIn(questions, text)) return { ok: false, reason: "duplicate" };
-    const ord = getExistingOrder(subject, topic, subTopic);
-    const newQ = {
-      Subject: subject, Topic: topic, SubTopic: subTopic,
-      Question: text, Answer: answerText || "",
-      Done: draft.Done, ReviewLater: draft.ReviewLater,
-      Duplicate: draft.Duplicate, LessImportant: draft.LessImportant, Starred: draft.Starred,
-      // Requirement: always append at the bottom of this SubTopic's list — nextQuestionOrder()
-      // reads state.rawData directly rather than trusting `questions`.length, which can be a
-      // Status-filtered (shorter) subset when a filter is active.
-      Order: nextQuestionOrder(subject, topic, subTopic),
-      SubjectOrder: ord.subjectOrder, TopicOrder: ord.topicOrder, SubTopicOrder: ord.subTopicOrder,
-      _id: uid("q")
-    };
-    questions.push(newQ);
-    state.rawData.push(newQ);
-
-    // Requirement: if this save was pre-filled via "Add anyway" from a specific matched
-    // question, position the new question directly after that one instead of at the end.
-    // Only ever applies to the FIRST save after a pre-fill — Save & Add's later prompts
-    // fall through to the normal end-of-list placement.
-    const insertAfterQid = singlePanel.dataset.insertAfterQid;
-    if (insertAfterQid) {
-      delete singlePanel.dataset.insertAfterQid;
-      if (questions.some(q => q._id === insertAfterQid)) {
-        const newOrderIds = idsWithInsertAfter(questions.map(q => q._id), newQ._id, insertAfterQid);
-        reorderSubTopicQuestions(subject, topic, subTopic, newOrderIds);
-      }
-    }
-
-    persistCurrentProgress();
-    // Prunes this SubTopic's now-redundant empty-group marker (if it was one) so it doesn't
-    // linger as a duplicate ghost entry once it genuinely has a question.
-    state.grouped = groupData(state.rawData, state.emptyGroups);
-    return { ok: true, newQ };
-  }
-
-  /* Shared by the "Save Question" button and the fuzzy-hint "Add anyway" icon (which fires
-     this with whatever is currently in the form, from the target question's accordion). */
-  function finishSingleSave(text, answer) {
-    const result = trySaveQuestion(text, answer);
-    if (!result.ok) {
-      alert(result.reason === "empty" ? "Question text cannot be empty." : "This question already exists in this accordion.");
-      return;
-    }
-    resetSingleForm();
-    singlePanel.style.display = "none";
-    // Requirement: adding a question shouldn't collapse whatever else was already open.
-    const openState = captureOpenState();
-    state.pendingFocusQid = result.newQ._id; // stay on the question we just added instead of collapsing back
-    render();
-    restoreOpenState(openState);
-    showSubTopicAlert(subject, topic, subTopic, "success", 'Added: "' + result.newQ.Question + '"', result.newQ._id);
-    flashHighlightItem(document.querySelector('[data-qid="' + result.newQ._id + '"]'));
-  }
-
-  saveSingleBtn.addEventListener("click", () => finishSingleSave(qInput.value, aInput.value));
-
-  /* Requirement: "Save & Add" — saves the current form, then keeps prompting via
-     window.prompt() for more Question/Answer pairs (same Subject/Topic/SubTopic) until the
-     user cancels a prompt. */
-  const saveAddBtn = document.createElement("button");
-  saveAddBtn.type = "button";
-  saveAddBtn.className = "btn btn-sm btn-outline-success me-2";
-  saveAddBtn.textContent = "Save & Add";
-  singleActions.insertBefore(saveAddBtn, cancelSingleBtn);
-
-  saveAddBtn.addEventListener("click", () => {
-    const first = trySaveQuestion(qInput.value, aInput.value);
-    if (!first.ok) {
-      alert(first.reason === "empty" ? "Question text cannot be empty." : "This question already exists in this accordion.");
-      return;
-    }
-    let lastId = first.newQ._id;
-    let count = 1;
-    while (true) {
-      const nextQuestion = prompt('Next question for "' + subject + " / " + topic + " / " + subTopic + '" (Cancel to stop):');
-      if (nextQuestion === null) break;
-      if (!nextQuestion.trim()) { alert("Question text cannot be empty — skipped."); continue; }
-      const nextAnswer = prompt("Answer for that question (HTML allowed, optional):") || "";
-      const result = trySaveQuestion(nextQuestion, nextAnswer);
-      if (!result.ok) {
-        alert('Already exists — skipped: "' + nextQuestion.trim() + '"');
-        continue;
-      }
-      lastId = result.newQ._id;
-      count++;
-    }
-    resetSingleForm();
-    singlePanel.style.display = "none";
-    const openState = captureOpenState();
-    state.pendingFocusQid = lastId;
-    render();
-    restoreOpenState(openState);
-    showSubTopicAlert(subject, topic, subTopic, "success", count + " question(s) added — click to view the last one", lastId);
-  });
-
-  /* ---- Bulk add form (CSV pasted into a textarea) ---- */
-  const bulkPanel = document.createElement("div");
-  bulkPanel.className = "add-question-panel";
-  bulkPanel.style.display = "none";
-
-  const bulkHint = document.createElement("div");
-  bulkHint.className = "small text-muted mb-1";
-  bulkHint.textContent = "One question per row, tab-separated: Question [Tab] Answer [Tab] Done [Tab] Review Later [Tab] Duplicate [Tab] Less Important [Tab] Starred. Paste directly from Excel/Google Sheets, or type fields separated by Tab. No header row. Answer and every status flag are optional and may be left off the end of a row — status flags accept true/false (or 1/0) and default to false (unmarked) when omitted.";
-
-  const bulkTextarea = document.createElement("textarea");
-  bulkTextarea.className = "form-control form-control-sm mb-2";
-  bulkTextarea.rows = 6;
-  bulkTextarea.placeholder = "question\tanswer";
-  enableTabCharacterInsertion(bulkTextarea);
-
-  const bulkTemplateLink = createBulkTemplateLink(bulkTextarea, "question\tanswer\tDone\tReview Later\tDuplicate\tLess Important\tStarred");
-
-  const bulkActions = document.createElement("div");
-  const saveBulkBtn = document.createElement("button");
-  saveBulkBtn.type = "button";
-  saveBulkBtn.className = "btn btn-sm btn-success me-2";
-  saveBulkBtn.textContent = "Add All";
-  const cancelBulkBtn = document.createElement("button");
-  cancelBulkBtn.type = "button";
-  cancelBulkBtn.className = "btn btn-sm btn-outline-secondary";
-  cancelBulkBtn.textContent = "Cancel";
-  bulkActions.appendChild(saveBulkBtn);
-  bulkActions.appendChild(cancelBulkBtn);
-
-  bulkPanel.appendChild(bulkHint);
-  bulkPanel.appendChild(bulkTemplateLink);
-  bulkPanel.appendChild(bulkTextarea);
-  bulkPanel.appendChild(bulkActions);
-
-  bulkBtn.addEventListener("click", () => {
-    singlePanel.style.display = "none";
-    bulkPanel.style.display = bulkPanel.style.display === "none" ? "block" : "none";
-  });
-
-  cancelBulkBtn.addEventListener("click", () => {
-    bulkTextarea.value = "";
-    bulkPanel.style.display = "none";
-  });
-
-  saveBulkBtn.addEventListener("click", () => {
-    const rawText = bulkTextarea.value.trim();
-    if (!rawText) {
-      alert("Paste at least one CSV row first.");
-      return;
-    }
-    const parsed = Papa.parse(rawText, { skipEmptyLines: true, delimiter: "\t" });
-    if (parsed.errors && parsed.errors.length) {
-      alert("Could not parse that text: " + parsed.errors[0].message);
-      return;
-    }
-    // Requirement: bulk-added questions always append at the bottom — nextOrder starts from
-    // state.rawData's real count for this SubTopic (nextQuestionOrder()), not `questions`.length,
-    // which can be a Status-filtered (shorter) subset when a filter is active.
-    let nextOrder = nextQuestionOrder(subject, topic, subTopic);
-    let added = 0;
-    let lastAddedId = null;
-    const ord = getExistingOrder(subject, topic, subTopic);
-    parsed.data.forEach(row => {
-      const questionText = (row[0] || "").trim();
-      if (!questionText) return;
-      // Requirement: status flags are optional trailing columns — Done/ReviewLater/Duplicate/
-      // LessImportant/Starred, in that order, tab-separated after Answer. toBool() (utils.js)
-      // already treats a missing/blank column as false, which is exactly "omitted -> unmarked".
-      const newQ = {
-        Subject: subject, Topic: topic, SubTopic: subTopic,
-        Question: questionText, Answer: row[1] || "",
-        Done: toBool(row[2]), ReviewLater: toBool(row[3]), Duplicate: toBool(row[4]),
-        LessImportant: toBool(row[5]), Starred: toBool(row[6]),
-        Order: nextOrder++,
-        SubjectOrder: ord.subjectOrder, TopicOrder: ord.topicOrder, SubTopicOrder: ord.subTopicOrder,
-        _id: uid("q")
-      };
-      questions.push(newQ);
-      state.rawData.push(newQ);
-      lastAddedId = newQ._id;
-      added++;
-    });
-    if (!added) {
-      alert("No valid rows found (first column must be non-empty Question text).");
-      return;
-    }
-    persistCurrentProgress();
-    // Prunes this SubTopic's now-redundant empty-group marker (if it was one).
-    state.grouped = groupData(state.rawData, state.emptyGroups);
-    bulkTextarea.value = "";
-    bulkPanel.style.display = "none";
-    const openState = captureOpenState();
-    state.pendingFocusQid = lastAddedId; // stay on the SubTopic, land on the last question added
-    render();
-    restoreOpenState(openState);
-    showSubTopicAlert(subject, topic, subTopic, "success", added + " question(s) added — click to view the last one", lastAddedId);
-  });
-
-  wrap.appendChild(singlePanel);
-  wrap.appendChild(bulkPanel);
-  return wrap;
 }
 
 // Requirement: Reusable Global Selection Form — the "Change Subject/Topic/SubTopic" controls,
@@ -2353,15 +2148,19 @@ export function createSubTopic(subject, topic, subTopic, questions, parentId, is
   const body = document.createElement("div");
   body.className = "accordion-body";
 
-  const addQuestionWrap = createAddQuestionPanel(subject, topic, subTopic, questions);
-
-  // Requirement: bulk selection — a "Select" link next to "+ Add Question"/"+ Bulk Add (CSV)"
-  // toggles a checkbox on every question below (CSS: [data-sub-topic].selecting), and a bulk
-  // drag-handle bar appears once 1+ are checked, for moving them all in one drag (see the header
-  // drop zone above, and the bulk handle's dragstart below — same draggingQids/draggingSourceKey
-  // plumbing as a single-question drag).
+  // Requirement: the root-level "+ Bulk Add (CSV)" / "+ Bulk Update (CSV)" already cover this
+  // SubTopic's questions too — this level gets its own scoped "+ Bulk Copy (CSV)" plus "Select"/
+  // "Select All", which toggles a checkbox on every question below (CSS:
+  // [data-sub-topic].selecting), and a bulk drag-handle bar appears once 1+ are checked, for
+  // moving them all in one drag (see the header drop zone above, and the bulk handle's dragstart
+  // below — same draggingQids/draggingSourceKey plumbing as a single-question drag).
   const selectedQids = new Set();
-  const addQuestionToolbar = addQuestionWrap.querySelector(":scope > .d-flex.gap-2.mb-2");
+  const questionControlsRow = document.createElement("div");
+  questionControlsRow.className = "d-flex align-items-start flex-wrap gap-2 mb-2 quick-add-row";
+  questionControlsRow.appendChild(createBulkCopyCsvButton(
+    () => questions,
+    () => state.emptyGroups.filter(g => g.Subject === subject && g.Topic === topic && g.SubTopic === subTopic)
+  ));
   const selectToggleBtn = document.createElement("button");
   selectToggleBtn.type = "button";
   selectToggleBtn.className = "btn btn-sm btn-outline-secondary select-toggle-btn";
@@ -2371,11 +2170,9 @@ export function createSubTopic(subject, topic, subTopic, questions, parentId, is
   selectAllBtn.className = "btn btn-sm btn-outline-secondary select-toggle-btn";
   selectAllBtn.textContent = "Select All";
   selectAllBtn.style.display = "none"; // only useful once selection mode is on
-  if (addQuestionToolbar) {
-    addQuestionToolbar.appendChild(selectToggleBtn);
-    addQuestionToolbar.appendChild(selectAllBtn);
-  }
-  body.appendChild(addQuestionWrap);
+  questionControlsRow.appendChild(selectToggleBtn);
+  questionControlsRow.appendChild(selectAllBtn);
+  body.appendChild(questionControlsRow);
 
   const bulkBar = document.createElement("div");
   bulkBar.className = "bulk-move-bar";
@@ -2624,32 +2421,34 @@ export function createSubTopic(subject, topic, subTopic, questions, parentId, is
 // drop-target SubTopic's question order exactly as the drag left it (including the dropped
 // item), so the question lands right where the user dropped it, not at the end of the list.
 export function moveQuestionToSubTopic(qid, subject, topic, newSubTopic, newOrderIds) {
-  const q = state.rawData.find(r => r._id === qid);
-  if (!q) return;
-  const oldSubTopic = q.SubTopic;
-  if (oldSubTopic === newSubTopic) return;
+  withHistory(() => {
+    const q = state.rawData.find(r => r._id === qid);
+    if (!q) return;
+    const oldSubTopic = q.SubTopic;
+    if (oldSubTopic === newSubTopic) return;
 
-  const openState = captureOpenState();
-  const ord = getExistingOrder(subject, topic, newSubTopic);
-  q.Subject = subject;
-  q.Topic = topic;
-  q.SubTopic = newSubTopic;
-  q.SubjectOrder = ord.subjectOrder;
-  q.TopicOrder = ord.topicOrder;
-  q.SubTopicOrder = ord.subTopicOrder;
+    const openState = captureOpenState();
+    const ord = getExistingOrder(subject, topic, newSubTopic);
+    q.Subject = subject;
+    q.Topic = topic;
+    q.SubTopic = newSubTopic;
+    q.SubjectOrder = ord.subjectOrder;
+    q.TopicOrder = ord.topicOrder;
+    q.SubTopicOrder = ord.subTopicOrder;
 
-  // The SubTopic this question just left may now be empty — keep its header around instead of
-  // letting it vanish from the tree (markGroupEmpty() is a no-op if it still has other rows).
-  markGroupEmpty(subject, topic, oldSubTopic);
+    // The SubTopic this question just left may now be empty — keep its header around instead of
+    // letting it vanish from the tree (markGroupEmpty() is a no-op if it still has other rows).
+    markGroupEmpty(subject, topic, oldSubTopic);
 
-  state.grouped = groupData(state.rawData, state.emptyGroups);
-  reorderSubTopicQuestions(subject, topic, newSubTopic, newOrderIds);
-  persistCurrentProgress();
-  refreshFilterOptions();
-  state.pendingFocusQid = q._id;
-  render();
-  restoreOpenState(openState);
-  highlightMovedQuestion(q._id);
+    state.grouped = groupData(state.rawData, state.emptyGroups);
+    reorderSubTopicQuestions(subject, topic, newSubTopic, newOrderIds);
+    persistCurrentProgress();
+    refreshFilterOptions();
+    state.pendingFocusQid = q._id;
+    render();
+    restoreOpenState(openState);
+    highlightMovedQuestion(q._id);
+  });
 }
 
 // Requirement: drop target for a SubTopic HEADER (see wiring in createSubTopic()) — used for a
@@ -2658,34 +2457,36 @@ export function moveQuestionToSubTopic(qid, subject, topic, newSubTopic, newOrde
 // with. Unlike moveQuestionToSubTopic(), there's no drag-observed order to honor — each moved
 // question is just appended after the destination's existing questions.
 export function moveQuestionsToSubTopic(qids, subject, topic, newSubTopic) {
-  const openState = captureOpenState();
-  const movedIds = [];
-  qids.forEach(qid => {
-    const q = state.rawData.find(r => r._id === qid);
-    if (!q || (q.Subject === subject && q.Topic === topic && q.SubTopic === newSubTopic)) return;
-    const oldSubject = q.Subject, oldTopic = q.Topic, oldSubTopic = q.SubTopic;
-    const ord = getExistingOrder(subject, topic, newSubTopic);
-    const siblingCount = state.rawData.filter(r => r.Subject === subject && r.Topic === topic && r.SubTopic === newSubTopic).length;
-    q.Subject = subject;
-    q.Topic = topic;
-    q.SubTopic = newSubTopic;
-    q.Order = siblingCount;
-    q.SubjectOrder = ord.subjectOrder;
-    q.TopicOrder = ord.topicOrder;
-    q.SubTopicOrder = ord.subTopicOrder;
-    markGroupEmpty(oldSubject, oldTopic, oldSubTopic);
-    movedIds.push(q._id);
-  });
-  if (!movedIds.length) return;
+  withHistory(() => {
+    const openState = captureOpenState();
+    const movedIds = [];
+    qids.forEach(qid => {
+      const q = state.rawData.find(r => r._id === qid);
+      if (!q || (q.Subject === subject && q.Topic === topic && q.SubTopic === newSubTopic)) return;
+      const oldSubject = q.Subject, oldTopic = q.Topic, oldSubTopic = q.SubTopic;
+      const ord = getExistingOrder(subject, topic, newSubTopic);
+      const siblingCount = state.rawData.filter(r => r.Subject === subject && r.Topic === topic && r.SubTopic === newSubTopic).length;
+      q.Subject = subject;
+      q.Topic = topic;
+      q.SubTopic = newSubTopic;
+      q.Order = siblingCount;
+      q.SubjectOrder = ord.subjectOrder;
+      q.TopicOrder = ord.topicOrder;
+      q.SubTopicOrder = ord.subTopicOrder;
+      markGroupEmpty(oldSubject, oldTopic, oldSubTopic);
+      movedIds.push(q._id);
+    });
+    if (!movedIds.length) return;
 
-  state.grouped = groupData(state.rawData, state.emptyGroups);
-  persistCurrentProgress();
-  refreshFilterOptions();
-  state.pendingFocusQid = movedIds[movedIds.length - 1];
-  render();
-  restoreOpenState(openState);
-  showSuccessAlert(movedIds.length + ' question(s) moved to "' + subject + " / " + topic + " / " + newSubTopic + '".');
-  highlightMovedQuestion(movedIds[movedIds.length - 1]);
+    state.grouped = groupData(state.rawData, state.emptyGroups);
+    persistCurrentProgress();
+    refreshFilterOptions();
+    state.pendingFocusQid = movedIds[movedIds.length - 1];
+    render();
+    restoreOpenState(openState);
+    showSuccessAlert(movedIds.length + ' question(s) moved to "' + subject + " / " + topic + " / " + newSubTopic + '".');
+    highlightMovedQuestion(movedIds[movedIds.length - 1]);
+  });
 }
 
 export function createStatusIconToggle(opts) {
@@ -2907,7 +2708,7 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
 
   const doneBtn = createStatusIconToggle({
     key: "done", icon: "fa-solid fa-check", label: "Done", initial: !!q.Done, compact: true,
-    onToggle: active => {
+    onToggle: active => withHistory(() => {
       q.Done = active;
       if (q.Done && reviewBtn.classList.contains("is-active")) {
         reviewBtn.classList.remove("is-active");
@@ -2917,12 +2718,12 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
       applyStatusClass(item, q);
       syncBadges(q);
       persistCurrentProgress();
-    }
+    })
   });
 
   const reviewBtn = createStatusIconToggle({
     key: "review", icon: "fa-solid fa-clock", label: "Review Later", initial: !!q.ReviewLater, compact: true,
-    onToggle: active => {
+    onToggle: active => withHistory(() => {
       q.ReviewLater = active;
       if (q.ReviewLater && doneBtn.classList.contains("is-active")) {
         doneBtn.classList.remove("is-active");
@@ -2932,12 +2733,12 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
       applyStatusClass(item, q);
       syncBadges(q);
       persistCurrentProgress();
-    }
+    })
   });
 
   const dupBtn = createStatusIconToggle({
     key: "duplicate", icon: "fa-solid fa-clone", label: "Duplicate", initial: !!q.Duplicate, compact: true,
-    onToggle: (active, btn) => {
+    onToggle: (active, btn) => withHistory(() => {
       if (active && q.Answer && q.Answer.trim()) {
         const proceed = confirm("This question already has an answer filled in. Marking it Duplicate excludes it from the exported Progress CSV, so it could effectively be lost. Continue?");
         if (!proceed) {
@@ -2948,12 +2749,12 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
       }
       q.Duplicate = active;
       persistCurrentProgress();
-    }
+    })
   });
 
   const lessBtn = createStatusIconToggle({
     key: "less", icon: "fa-solid fa-down-long", label: "Less Important", initial: !!q.LessImportant, compact: true,
-    onToggle: active => {
+    onToggle: active => withHistory(() => {
       q.LessImportant = active;
       syncBadges(q);
       persistCurrentProgress();
@@ -2963,12 +2764,12 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
       state.pendingFocusQid = q._id;
       render();
       highlightMovedQuestion(q._id);
-    }
+    })
   });
 
   const starBtn = createStatusIconToggle({
     key: "star", icon: "fa-solid fa-star", label: "Starred", initial: !!q.Starred, compact: true,
-    onToggle: active => {
+    onToggle: active => withHistory(() => {
       q.Starred = active;
       persistCurrentProgress();
       // Re-sort this SubTopic so Starred stays first, then jump back to the question
@@ -2977,7 +2778,7 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
       state.pendingFocusQid = q._id;
       render();
       highlightMovedQuestion(q._id);
-    }
+    })
   });
 
   const deleteBtn = document.createElement("button");
@@ -3120,6 +2921,11 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
   const editWrapper = document.createElement("div");
   editWrapper.style.display = "none";
 
+  const link = document.createElement("a");
+  link.target = "_blank";
+  link.href = "https://text-html.com/";
+  link.textContent = "Text to HTML";
+
   const textarea = document.createElement("textarea");
   textarea.className = "form-control mb-2";
   textarea.rows = 6;
@@ -3140,13 +2946,14 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
 
   editActions.appendChild(saveBtn);
   editActions.appendChild(cancelBtn);
+  editWrapper.appendChild(link);
   editWrapper.appendChild(textarea);
   editWrapper.appendChild(editActions);
 
   function enterEditMode() {
     textarea.value = q.Answer || "";
     answerContent.style.display = "none";
-    editBtn.style.display = "none";
+    answerEditRow.style.display = "none";
     editWrapper.style.display = "block";
     textarea.focus();
   }
@@ -3154,7 +2961,7 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
   function exitEditMode() {
     editWrapper.style.display = "none";
     answerContent.style.display = "";
-    editBtn.style.display = "";
+    answerEditRow.style.display = "";
   }
 
   editBtn.addEventListener("click", enterEditMode);
@@ -3233,6 +3040,15 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
   body.appendChild(editWrapper);
   collapse.appendChild(body);
   item.appendChild(collapse);
+
+  // Requirement: opening a question that has no answer yet should drop straight into the
+  // answer textarea instead of showing an empty answer body with just an "Add Answer" button.
+  collapse.addEventListener("shown.bs.collapse", e => {
+    if (e.target !== collapse) return;
+    if (!(q.Answer && q.Answer.trim()) && editWrapper.style.display === "none") {
+      enterEditMode();
+    }
+  });
 
   if (isTarget) {
     expandItem(button, collapse);

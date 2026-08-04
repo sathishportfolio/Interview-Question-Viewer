@@ -123,13 +123,6 @@ export function computeStats(questions) {
   };
 }
 
-export function idsWithInsertAfter(ids, targetId, referenceId) {
-  const others = ids.filter(id => id !== targetId);
-  const idx = others.indexOf(referenceId);
-  if (idx === -1) return [...others, targetId];
-  return [...others.slice(0, idx + 1), targetId, ...others.slice(idx + 1)];
-}
-
 // Requirement: register a Subject/Topic/SubTopic as an empty group (either freshly created via
 // the independent "+ Add New ..." flow with nothing under it yet, or left behind after its last
 // question was deleted/dragged away). Pass null for Topic/SubTopic to mark a shallower group
@@ -193,13 +186,6 @@ export function questionExistsIn(questions, text) {
   const norm = t => (t || "").trim().toLowerCase();
   const target = norm(text);
   return questions.some(q => norm(q.Question) === target);
-}
-
-export function significantWords(text) {
-  return (text || "")
-    .toLowerCase()
-    .split(/[^a-z0-9]+/i)
-    .filter(w => w.length > 5);
 }
 
 export function buildTreeCopyText(node, kind, label) {

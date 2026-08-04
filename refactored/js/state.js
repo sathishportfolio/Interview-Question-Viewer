@@ -23,6 +23,8 @@ export const state = {
   expandDirection: "first",  // "first" normally, "last" when tempMode is on
   scrollTargetEl: null,
   pendingFocusQid: null,     // set before render() to auto-expand + scroll to a specific question's accordion chain
+  pendingActiveQuestionScroll: false, // set true once by initApp()/activateFile() on load; consumed by the
+                              // next render() to auto-scroll to state.activeQuestion if it's visible
   editModeOn: false,         // mirrors editModeToggle; while true, render() skips first/last auto-expand
   dragDropOn: true,          // mirrors #dragDropToggleBtn (stats.js); independent of editModeOn —
                               // while false, body.drag-drop-off (style.css) hides every .drag-handle,

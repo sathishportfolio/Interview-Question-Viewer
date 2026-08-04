@@ -352,6 +352,7 @@ export function initApp() {
     const rows = readFileData(active);
     const emptyGroups = readEmptyGroups(active);
     if (rows && (rows.length || emptyGroups.length)) {
+      state.pendingActiveQuestionScroll = true;
       activateFile(active, rows, emptyGroups);
       setStatusMsg(rows.length + " - from \"" + active + "\" .");
       return;
@@ -371,15 +372,16 @@ SQL,Joins,Easy,What is the difference between INNER JOIN and LEFT JOIN?,<p>INNER
 SQL,Indexing,Medium,When should you avoid adding an index?,<ul><li>Small tables</li><li>Columns with low cardinality</li><li>Tables with heavy write load</li></ul>,false,false,false,true`;
 }
 
-// Requirement: the exact CSV text downloadProgress() writes to a file, factored out so the
-// #copyProgressCsvBtn handler (js/app.js — clipboard, for pasting into data.js's csvString) can
-// build the identical text without duplicating the row-shaping logic. Returns "" if there's
-// nothing to export.
-export function buildProgressCsv() {
-  if (!state.rawData.length && !state.emptyGroups.length) return "";
+// Requirement: the exact row-shaping #copyProgressCsvBtn/downloadProgress use for the whole
+// file, factored out so every "+ Bulk Copy (CSV)" button (global, Subject, Topic, SubTopic —
+// see createBulkQuestionCsvTools() in components/tree.js) can reuse it unchanged, just pre-
+// filtered down to whatever scope that button covers, instead of re-implementing the same
+// column shape per level.
+export function buildQuestionsCsv(rows, emptyGroups) {
+  if (!rows.length && !(emptyGroups && emptyGroups.length)) return "";
 
-  const exportRows = state.rawData
-    .filter(r => !r.Duplicate) // duplicates are dropped from the exported progress file
+  const exportRows = rows
+    .filter(r => !r.Duplicate) // duplicates are dropped from the exported CSV
     .map(r => ({
       Subject: r.Subject,
       Topic: r.Topic,
@@ -397,10 +399,10 @@ export function buildProgressCsv() {
     }));
 
   // Requirement: empty Subject/Topic/SubTopic headers (no questions under them) aren't stripped
-  // from the exported Progress CSV — write one marker row per empty group (blank Question,
-  // Topic/SubTopic left blank too for a shallower empty group); processParsedResults() picks
-  // these back out on re-import instead of treating them as invalid rows.
-  const emptyRows = state.emptyGroups.map(g => ({
+  // from the exported CSV — write one marker row per empty group (blank Question, Topic/SubTopic
+  // left blank too for a shallower empty group); processParsedResults() picks these back out on
+  // re-import instead of treating them as invalid rows.
+  const emptyRows = (emptyGroups || []).map(g => ({
     Subject: g.Subject,
     Topic: g.Topic || "",
     SubTopic: g.SubTopic || "",
@@ -417,6 +419,10 @@ export function buildProgressCsv() {
   }));
 
   return Papa.unparse(exportRows.concat(emptyRows));
+}
+
+export function buildProgressCsv() {
+  return buildQuestionsCsv(state.rawData, state.emptyGroups);
 }
 
 export function downloadProgress() {

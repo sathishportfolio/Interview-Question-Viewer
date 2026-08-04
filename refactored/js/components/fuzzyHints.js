@@ -1,9 +1,6 @@
 /* Auto-generated module split from InterviewQuestionViewer_v24.html — verify in a browser before trusting this. */
-import { state, FLASH_DURATION_MS } from '../state.js';
-import { persistCurrentProgress } from '../api.js';
-import { refreshFilterOptions } from './filters.js';
-import { captureOpenState, expandToQuestion, render, reorderSubTopicQuestions, restoreOpenState, updateHeaderBreadcrumb } from './tree.js';
-import { getExistingOrder, idsWithInsertAfter, questionExistsIn, significantWords, uid } from '../utils.js';
+import { FLASH_DURATION_MS } from '../state.js';
+import { expandToQuestion, updateHeaderBreadcrumb } from './tree.js';
 
 export function subTopicAlertKey(subject, topic, subTopic) {
   return subject + "\u0001" + topic + "\u0001" + subTopic;
@@ -67,22 +64,6 @@ export function showSuccessAlert(message) {
   }, 3000);
 }
 
-export function findFuzzyMatches(text) {
-  const words = new Set(significantWords(text));
-  if (!words.size) return [];
-  const normTarget = (text || "").trim().toLowerCase();
-  const scored = [];
-  state.rawData.forEach(q => {
-    const qWords = significantWords(q.Question);
-    const sharedCount = qWords.filter(w => words.has(w)).length;
-    if (sharedCount > 0) {
-      scored.push({ q, sharedCount, exact: q.Question.trim().toLowerCase() === normTarget });
-    }
-  });
-  scored.sort((a, b) => (b.exact - a.exact) || (b.sharedCount - a.sharedCount));
-  return scored.slice(0, 10);
-}
-
 export function flashHighlightItem(el, sourceCtx) {
   if (!el) return;
   const surface = el.querySelector(":scope > .accordion-header") || el;
@@ -104,16 +85,6 @@ export function flashHighlightItem(el, sourceCtx) {
     backBtn.innerHTML = '<i class="fa-solid fa-rotate-left"></i>';
     backBtn.addEventListener("click", e => { e.stopPropagation(); sourceCtx.jumpBack(); });
     actionIcons.appendChild(backBtn);
-  }
-
-  if (sourceCtx && sourceCtx.addAnyway) {
-    const addBtn = document.createElement("button");
-    addBtn.type = "button";
-    addBtn.className = "flash-action-icon-btn";
-    addBtn.title = "Add my question here (pre-filled)";
-    addBtn.innerHTML = '<i class="fa-solid fa-plus"></i>';
-    addBtn.addEventListener("click", e => { e.stopPropagation(); sourceCtx.addAnyway(el); });
-    actionIcons.appendChild(addBtn);
   }
 
   const dismissBtn = document.createElement("button");
@@ -171,73 +142,6 @@ export function jumpToQuestion(qid, sourceCtx) {
     qItem.scrollIntoView({ behavior: "smooth", block: "center" });
   });
   flashHighlightItem(qItem, sourceCtx);
-}
-
-export function openSubTopicAddPanelPrefilled(qItem, questionText, answerText) {
-  const body = qItem.closest(".accordion-body");
-  if (!body) return null;
-  const wrap = body.querySelector(":scope > .add-question-wrap");
-  if (!wrap) return null;
-  const singlePanel = wrap.querySelector(":scope > .add-question-panel");
-  if (!singlePanel) return null;
-  const addBtn = wrap.querySelector(":scope > .d-flex.gap-2 > button:first-child");
-  if (singlePanel.style.display === "none" && addBtn) addBtn.click(); // also hides bulkPanel
-
-  const textareas = singlePanel.querySelectorAll("textarea");
-  if (textareas[0]) {
-    textareas[0].value = questionText || "";
-    textareas[0].dispatchEvent(new Event("input")); // refresh its own live fuzzy-hint preview
-  }
-  if (textareas[1]) textareas[1].value = answerText || "";
-
-  // Requirement: when this pre-filled draft gets saved, it should land directly after the
-  // matched question that triggered "Add anyway" — trySaveQuestion (in createAddQuestionPanel)
-  // reads and clears this once it's used.
-  singlePanel.dataset.insertAfterQid = qItem.dataset.qid;
-
-  return wrap;
-}
-
-export function addQuestionAfterMatch(matchedQ, questionText, answerText, draft) {
-  const arr = state.grouped[matchedQ.Subject] && state.grouped[matchedQ.Subject][matchedQ.Topic] &&
-    state.grouped[matchedQ.Subject][matchedQ.Topic][matchedQ.SubTopic];
-  if (!arr) return;
-
-  const text = (questionText || "").trim();
-  if (!text) {
-    alert("Question text cannot be empty.");
-    return;
-  }
-  if (questionExistsIn(arr, text)) {
-    alert("This question already exists under " + matchedQ.Subject + " / " + matchedQ.Topic + " / " + matchedQ.SubTopic + ".");
-    return;
-  }
-
-  const ord = getExistingOrder(matchedQ.Subject, matchedQ.Topic, matchedQ.SubTopic);
-  const newQ = {
-    Subject: matchedQ.Subject, Topic: matchedQ.Topic, SubTopic: matchedQ.SubTopic,
-    Question: text, Answer: answerText || "",
-    Done: draft.Done, ReviewLater: draft.ReviewLater,
-    Duplicate: draft.Duplicate, LessImportant: draft.LessImportant, Starred: draft.Starred,
-    Order: arr.length,
-    SubjectOrder: ord.subjectOrder, TopicOrder: ord.topicOrder, SubTopicOrder: ord.subTopicOrder,
-    _id: uid("q")
-  };
-  arr.push(newQ);
-  state.rawData.push(newQ);
-
-  const newOrderIds = idsWithInsertAfter(arr.map(q => q._id), newQ._id, matchedQ._id);
-  reorderSubTopicQuestions(matchedQ.Subject, matchedQ.Topic, matchedQ.SubTopic, newOrderIds);
-  persistCurrentProgress();
-  refreshFilterOptions();
-
-  // Requirement: adding a question shouldn't collapse whatever else was already open.
-  const openState = captureOpenState();
-  state.pendingFocusQid = newQ._id;
-  render();
-  restoreOpenState(openState);
-  showSuccessAlert('Added: "' + newQ.Question + '"');
-  flashHighlightItem(document.querySelector('[data-qid="' + newQ._id + '"]'));
 }
 
 export function renderGroupedQuestionLinks(container, matches, opts) {
@@ -311,37 +215,11 @@ export function renderGroupedQuestionLinks(container, matches, opts) {
         jumpToQuestion(m.q._id, opts.sourceCtx);
       });
       row.appendChild(link);
-
-      // Requirement: icon-only "Add Question After" — only meaningful when there's a draft
-      // question to add (the fuzzy-duplicate case), not for plain search results.
-      if (opts.sourceCtx && opts.sourceCtx.addAfter) {
-        const addAfterLink = document.createElement("a");
-        addAfterLink.href = "#";
-        addAfterLink.className = "fuzzy-hint-add-after";
-        addAfterLink.title = "Add Question After";
-        addAfterLink.setAttribute("aria-label", "Add my question after: " + m.q.Question);
-        addAfterLink.innerHTML = '<i class="fa-solid fa-square-plus"></i>';
-        addAfterLink.addEventListener("click", e => {
-          e.preventDefault();
-          e.stopPropagation();
-          opts.sourceCtx.addAfter(m.q);
-        });
-        row.appendChild(addAfterLink);
-      }
-
       list.appendChild(row);
     });
 
     groupWrap.appendChild(groupHeader);
     groupWrap.appendChild(list);
     container.appendChild(groupWrap);
-  });
-}
-
-export function populateFuzzyHint(container, questionText, sourceCtx) {
-  const matches = findFuzzyMatches(questionText);
-  renderGroupedQuestionLinks(container, matches, {
-    label: "Possibly similar question(s) already exist, ranked by relevance:",
-    sourceCtx: sourceCtx
   });
 }

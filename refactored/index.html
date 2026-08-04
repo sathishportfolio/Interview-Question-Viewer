@@ -44,7 +44,7 @@ provide this as plain html clickable image
 
 <!-- 
 
-provide these title points in plain html <ol><li></li> 
+provide these title points in plain html <ul><li></li></ul>
   
 -->
 
@@ -164,6 +164,12 @@ provide these title points in plain html <ol><li></li>
   <div class="floating-toggles">
     <button type="button" id="closeAllAccordionsBtn" class="floating-toggle-item btn btn-outline-secondary btn-rounded" title="Close all open accordions">
       <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+    </button>
+    <button type="button" id="undoBtn" class="floating-toggle-item btn btn-outline-secondary btn-rounded" title="Undo last change" disabled>
+      <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+    </button>
+    <button type="button" id="redoBtn" class="floating-toggle-item btn btn-outline-secondary btn-rounded" title="Redo last undone change" disabled>
+      <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
     </button>
     <label class="floating-toggle-item editModeToggle btn btn-outline-secondary btn-rounded" title="Edit Mode: ON shows every control; OFF hides the toolbar/filter/add-new cards plus editing-only actions (drag, edit, copy, move, delete, duplicate)">
       <input type="checkbox" id="editModeToggle" class="visually-hidden">

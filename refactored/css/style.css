@@ -173,7 +173,7 @@ body {
 
 .answer-body {
   background: #fbfbfa;
-  padding-top: 2rem;
+  /* padding-top: 2rem; */
 }
 
 .empty-state {
@@ -229,9 +229,9 @@ body {
   font-size: .9rem;
   margin-bottom: .75rem;
   padding-bottom: .5rem;
-  padding-top: 2rem;
+  /* padding-top: 2rem; */
   border-top: 1px dashed var(--line);
-  margin-top: 2em;
+  /* margin-top: 2em; */
 }
 
 .status-controls label {
@@ -479,7 +479,7 @@ body {
   display: none;
 }
 
-.status-icon-btn.icon-flag.compact.is-active + .status-icon-btn.icon-collapse-all.compact {
+.status-icon-btn.icon-flag.compact.is-active+.status-icon-btn.icon-collapse-all.compact {
   display: flex;
 }
 
@@ -762,8 +762,8 @@ body {
   text-decoration: underline;
 }
 
-/* Fuzzy-duplicate suggestions: collapsible Subject > Topic > SubTopic groups, one question
-   per row, capped at 10 questions total (see findFuzzyMatches). */
+/* Search-result suggestions: collapsible Subject > Topic > SubTopic groups, one question
+   per row (see renderGroupedQuestionLinks()/search.js). */
 .fuzzy-hint-label {
   font-weight: 600;
   margin-bottom: .25rem;
@@ -813,20 +813,6 @@ body {
   cursor: pointer;
   text-decoration: underline;
   flex: 1 1 auto;
-}
-
-/* Requirement: icon-only "Add Question After" link — creates and auto-saves a new question
-   directly after this matched one, in its own SubTopic. */
-.fuzzy-hint-add-after {
-  flex: 0 0 auto;
-  color: #6c757d;
-  cursor: pointer;
-  font-size: .9rem;
-  padding: 0 .2rem;
-}
-
-.fuzzy-hint-add-after:hover {
-  color: var(--accent);
 }
 
 /* Requirement: flag exact-text fuzzy matches (real duplicates, not just related questions)
@@ -1040,6 +1026,9 @@ body.drag-drop-off .drag-handle {
   align-items: center;
   gap: .5rem;
   margin-bottom: .5rem;
+  border-top: dashed 1px #ccc;
+  margin-top: 10px;
+  padding-top: 10px;
 }
 
 /* Requirement: #filterCard (Subject/Topic/SubTopic/Status filters) is hidden by default and
@@ -1162,4 +1151,3 @@ body.edit-mode-off .subtopic-select-checkbox {
 .drop-target-highlight.is-active {
   display: block;
 }
-
