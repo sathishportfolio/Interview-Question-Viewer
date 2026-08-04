@@ -1383,24 +1383,37 @@ body.edit-mode-off .subtopic-select-checkbox {
   /* Requirement: the question row itself (icons vs. text) never wraps onto a second row — the
      inline copy/search/flag/collapse-all icon row (qInlineActions, createQuestion()) stays put
      at the far right, further shrunk beyond its normal .compact sizing since it matters more on
-     a narrow screen. The question TEXT, however, wraps onto multiple lines instead of being
-     ellipsis-truncated (previous behavior) — nothing is hidden, the accordion-button just grows
-     taller to fit; min-width:0 is what lets qText shrink below its content width so it wraps
-     instead of forcing the row wider than the screen. Scoped to ".accordion-button >
-     .status-icon-row" specifically — that's qInlineActions (nested inside the button);
-     controlsStart/controlsEnd (star / move-status-delete) are direct children of
-     .accordion-header instead, one level up, so they're untouched here. */
+     a narrow screen. Scoped to ".accordion-button > .status-icon-row" specifically — that's
+     qInlineActions (nested inside the button); controlsStart/controlsEnd (star /
+     move-status-delete) are direct children of .accordion-header instead, one level up, so
+     they're untouched here. */
   .q-item .accordion-button {
     flex-wrap: nowrap;
     align-items: center;
   }
 
+  /* Requirement: the question TEXT stays single-line (ellipsis-truncated, not wrapped) by
+     default — this is what applies while Edit Mode is ON, keeping every accordion row the same
+     consistent height while editing. min-width:0 is what lets qText shrink below its content
+     width so it can actually truncate instead of forcing the row wider than the screen. */
   .q-item .q-text-link {
     flex: 1 1 auto;
     min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* Requirement: while Edit Mode is OFF (the read-only mobile view), let the question text wrap
+     onto multiple lines instead — nothing hidden behind an ellipsis, the accordion-button just
+     grows taller to fit. Needs body.edit-mode-off's extra specificity to win over the
+     single-line default above without !important. */
+  body.edit-mode-off .q-item .q-text-link {
+    overflow: visible;
     white-space: normal;
     overflow-wrap: break-word;
     word-break: break-word;
+    text-overflow: clip;
   }
 
   /* Requirement: zero left/right padding on the question accordion-button — every icon row
