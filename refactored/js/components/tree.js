@@ -3068,11 +3068,18 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
   editQuestionBtn.textContent = "Edit Question";
   actionsRow.appendChild(editQuestionBtn);
 
+  // Requirement: Edit Answer stays visible/usable regardless of Edit Mode, unlike Edit Question
+  // and the move buttons above/below (still in actionsRow/.status-controls, still Edit-Mode-
+  // gated) — so it lives in its own row (.answer-edit-row, style.css), deliberately never
+  // touched by any body.edit-mode-off rule.
+  const answerEditRow = document.createElement("div");
+  answerEditRow.className = "answer-edit-row";
+
   const editBtn = document.createElement("button");
   editBtn.type = "button";
   editBtn.className = "btn btn-sm btn-outline-primary";
   editBtn.textContent = q.Answer && q.Answer.trim() ? "Edit Answer" : "Add Answer";
-  actionsRow.appendChild(editBtn);
+  answerEditRow.appendChild(editBtn);
 
   const moveUpBtn = document.createElement("button");
   moveUpBtn.type = "button";
@@ -3220,6 +3227,7 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
   });
 
   body.appendChild(answerContent);
+  body.appendChild(answerEditRow);
   body.appendChild(actionsRow);
   body.appendChild(questionEditWrapper);
   body.appendChild(editWrapper);

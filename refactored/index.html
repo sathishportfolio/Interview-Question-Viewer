@@ -18,6 +18,37 @@
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 </head>
 
+<!-- PROMPTS TO COPY PASTE INTO THE BROWSER CONSOLE FOR TESTING: -->
+
+<!-- 
+
+Refactor or structure the following content into pure HTML (no CSS). 
+
+Requirements:
+- Layout: 2-column layout using a table (50% left for text, 50% right for media/image).
+- Image: Placed on the right, dynamically sized to fit its column.
+- List: Ordered list on the left counting down using `reversed start="7"`.
+- Titles: Bold text (`<strong>`) instead of heading tags (`<h1>`-`<h6>`).
+- Formatting: Clean, semantic markup without extra standard spacing.
+
+-->
+
+<!-- 
+
+image source: 
+article link : 
+
+provide this as plain html clickable image 
+
+-->
+
+<!-- 
+
+provide these title points in plain html <ol><li></li> 
+  
+-->
+
+
 <body>
 
   <div class="app-header">
@@ -57,6 +88,9 @@
 
           <div class="col-auto">
             <button id="downloadProgressBtn" class="btn btn-outline-success" disabled><i class="fa-solid fa-download"></i> Export</button>
+          </div>
+          <div class="col-auto">
+            <button id="copyProgressCsvBtn" class="btn btn-outline-success" disabled title="Copy progress CSV to clipboard (paste into data.js's csvString to update the latest sample)"><i class="fa-solid fa-copy"></i></button>
           </div>
           <div class="col-auto">
             <select id="csvSwitcher" class="form-select" style="min-width:180px;" disabled>

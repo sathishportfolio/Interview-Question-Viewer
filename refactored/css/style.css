@@ -1004,7 +1004,6 @@ body.edit-mode-off #globalStatsBadges button {
    #controlsWrapper itself — #filterCardToggleLink and #filterCard both live inside
    #controlsWrapper too, but must stay visible/toggleable while Edit Mode is OFF (see the
    #filterCard rules below), which a display:none on their ancestor would make impossible. */
-body.edit-mode-off .drag-handle,
 body.edit-mode-off .status-controls,
 body.edit-mode-off .quick-add-row,
 body.edit-mode-off .tree-edit-btn,
@@ -1019,6 +1018,28 @@ body.edit-mode-off .icon-delete,
 body.edit-mode-off .toolbar-card,
 body.edit-mode-off .add-question-wrap {
   display: none !important;
+}
+
+/* Requirement: Drag & Drop is its own toggle (#dragDropToggleBtn, js/components/stats.js),
+   independent of Edit Mode — .drag-handle is deliberately NOT in the body.edit-mode-off list
+   above, so handles stay visible/usable regardless of Edit Mode. body.drag-drop-off (default:
+   absent, i.e. drag & drop ON — see state.dragDropOn/LS_DRAG_DROP_ON, state.js) hides every
+   handle, which also prevents Sortable from initiating a drag since handle:".drag-handle"
+   requires a visible/clickable handle element (same hide-to-disable pattern the old
+   edit-mode-off rule used). */
+body.drag-drop-off .drag-handle {
+  display: none !important;
+}
+
+/* Requirement: the Edit Answer action stays visible regardless of Edit Mode (unlike Edit
+   Question / move-up-down-top-bottom, which remain in .status-controls and stay Edit-Mode-
+   gated) — see .answer-edit-row in createQuestion() (tree.js), a sibling of .status-controls
+   deliberately left off every body.edit-mode-off rule above. */
+.answer-edit-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: .5rem;
 }
 
 /* Requirement: #filterCard (Subject/Topic/SubTopic/Status filters) is hidden by default and

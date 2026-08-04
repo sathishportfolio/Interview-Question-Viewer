@@ -1,5 +1,5 @@
 Subject,Topic,SubTopic,Question,Answer,Done,ReviewLater,LessImportant,Starred,Order,SubjectOrder,TopicOrder,SubTopicOrder
-Introduction,General,Previous Question Bank,Tell me about yourself,"<div data-qid=""q-5hkdopvm""><div data-bs-parent=""#qAcc-xhlde6v1""><div><div><div><h3>Tech Lead Interview Preparation - 11 Years Experience</h3><div><p><strong>Core Expectations:</strong></p><ul><li><strong>Who you are:</strong>&nbsp;Sathish - Angular / Java Full Stack Developer (B.E. Computer Science)</li><li><strong>Experience:</strong>&nbsp;11 years in software engineering</li><li><strong>Tech Stack:</strong>&nbsp;Java, Spring Boot, SQL, Angular, React, Kafka, RabbitMQ, Elasticsearch, Docker, Kubernetes</li><li><strong>Current Role:</strong>&nbsp;Technical Lead at HCLTech for a US-based Healthcare client</li><li><strong>Responsibilities:</strong>&nbsp;Hands-on development, solution design, code reviews, mentoring, Agile/SAFe execution</li><li><strong>Continuous Learning:</strong>&nbsp;Exploring Agentic AI for developer efficiency</li><li><strong>Reason for change:</strong>&nbsp;Contribute to larger-scale systems and grow as a full-stack technical leader</li></ul></div><div><p><strong>Delivery Tips:</strong>&nbsp;Speak naturally, keep it to 50-60 seconds, and focus on growth rather than leaving your current employer.</p><p><strong>Mnemonic:</strong>&nbsp;SBCDEPADACL (Sathish, Currently, Began, Domain, Expertise, Product owners, Architects, DevOps, Agile, Continuous learner, Looking for change)</p></div><div><h3>Pitch Option 1 (~60 Seconds)</h3><p>Hi, I'm Sathish. I completed my B.E. in Computer Science and have around 11 years of experience in software development, primarily building enterprise Java applications.</p><p>Currently, I'm working as a Technical Lead at HCLTech, where I lead the development of Java Spring Boot microservices and full-stack applications. My primary technical skills include Java, Spring Boot, SQL, Angular, Kafka, Elasticsearch, and RabbitMQ.</p><p>In my current role, apart from hands-on development, I also work on solution design, code reviews, mentoring team members, and collaborating with cross-functional teams to deliver scalable and reliable applications.</p><p>I'm now looking for an opportunity where I can take on more challenging technical problems, contribute to large-scale systems, and continue growing as a full-stack technical leader.</p></div><div><h3>Pitch Option 2 (~45 Seconds)</h3><p>Hi, I'm Sathish. I have a B.E. in Computer Science and around 11 years of experience in Java full-stack development. Currently, I'm working as a Technical Lead at HCLTech, developing enterprise applications using Java, Spring Boot, SQL, Angular, Kafka, Elasticsearch, and RabbitMQ.</p><p>My role involves designing solutions, developing microservices, reviewing code, mentoring developers, and working closely with business stakeholders. I'm now looking for a role where I can work on challenging projects, contribute to scalable systems, and continue growing technically.</p></div></div></div></div></div></div><div data-qid=""q-i9ozaeda""><h2>",false,false,false,false,0,0,0,0
+Introduction,General,Previous Question Bank,Tell me about yourself,"<div data-qid=""q-5hkdopvm""><div data-bs-parent=""#qAcc-xhlde6v1""><div><div><div><h3>Tech Lead Interview Preparation - 11 Years Experience</h3><div><p><strong>Core Expectations:</strong></p><ul><li><strong>Who you are:</strong>&nbsp;Sathish - Angular / Java Full Stack Developer (B.E. Computer Science)</li><li><strong>Experience:</strong>&nbsp;11 years in software engineering</li><li><strong>Tech Stack:</strong>&nbsp;Java, Spring Boot, SQL, Angular, React, Kafka, RabbitMQ, Elasticsearch, Docker, Kubernetes</li><li><strong>Current Role:</strong>&nbsp;Technical Lead at HCLTech for a US-based Healthcare client</li><li><strong>Responsibilities:</strong>&nbsp;Hands-on development, solution design, code reviews, mentoring, Agile/SAFe execution</li><li><strong>Continuous Learning:</strong>&nbsp;Exploring Agentic AI for developer efficiency</li><li><strong>Reason for change:</strong>&nbsp;Contribute to larger-scale systems and grow as a full-stack technical leader</li></ul></div><div><p><strong>Delivery Tips:</strong>&nbsp;Speak naturally, keep it to 50-60 seconds, and focus on growth rather than leaving your current employer.</p><p><strong>Mnemonic:</strong>&nbsp;SBCDEPADACL (Sathish, Currently, Began, Domain, Expertise, Product owners, Architects, DevOps, Agile, Continuous learner, Looking for change)</p></div><div><h3>Pitch Option 1 (~60 Seconds)</h3><p>Hi, I'm Sathish. I completed my B.E. in Computer Science and have around 11 years of experience in software development, primarily building enterprise Java applications.</p><p>Currently, I'm working as a Technical Lead at HCLTech, where I lead the development of Java Spring Boot microservices and full-stack applications. My primary technical skills include Java, Spring Boot, SQL, Angular, Kafka, Elasticsearch, and RabbitMQ.</p><p>In my current role, apart from hands-on development, I also work on solution design, code reviews, mentoring team members, and collaborating with cross-functional teams to deliver scalable and reliable applications.</p><p>I'm now looking for an opportunity where I can take on more challenging technical problems, contribute to large-scale systems, and continue growing as a full-stack technical leader.</p></div><div><h3>Pitch Option 2 (~45 Seconds)</h3><p>Hi, I'm Sathish. I have a B.E. in Computer Science and around 11 years of experience in Java full-stack development. Currently, I'm working as a Technical Lead at HCLTech, developing enterprise applications using Java, Spring Boot, SQL, Angular, Kafka, Elasticsearch, and RabbitMQ.</p><p>My role involves designing solutions, developing microservices, reviewing code, mentoring developers, and working closely with business stakeholders. I'm now looking for a role where I can work on challenging projects, contribute to scalable systems, and continue growing technically.</p></div></div></div></div></div></div><div data-qid=""q-i9ozaeda""><h2>",false,false,false,true,0,0,0,0
 Introduction,General,Previous Question Bank,Explain your current project,"The project is a web portal for digital aircraft maintenance manual
 	Like we versioning different editions of books this web portal is used to customize manual to aircraft customer based on their flight configuration
 	It is a cloud based spring boot microservice application which also support offline mode for tab users
@@ -14,13 +14,13 @@ Introduction,General,Previous Question Bank,Explain your current project,"The pr
 	I worked on customizing elastic search for offline application using angular & elasticsearch js plugin 
 	UI & Backend related tasks for filtering documents based on tags usings facets similar to ecommerce websites like Amazon 
 	Version controlling documents similar to Git branches using rabbitmq & camunda 
-	HOTFIX ",false,false,false,false,1,0,0,0
-Introduction,General,Previous Question Bank,Agile process - how feature is travelled,PI -> 3 sprints 1 Innovation&Planning(IP) sprint-> feature -> user story -> task -> sub-task -> bug -> SR ,false,false,false,false,2,0,0,0
-Introduction,General,Previous Question Bank,How will you secure your endpoint,"handle CSRF, middlewere, throttle (DDOS - Distribution of Deniel of service attack), authentication & auhtorization, oauth - clientId",false,false,false,false,5,0,0,0
-Introduction,General,Previous Question Bank,OSI layers,,false,false,false,false,6,0,0,0
-Introduction,General,Previous Question Bank,SOLID & GoF Design Patterns in Java,,false,false,false,true,7,0,0,0
-Introduction,General,Previous Question Bank,How to implement singleton or prototype design pattern,,false,false,false,false,8,0,0,0
-Introduction,General,Previous Question Bank,What is factory design pattern,,false,false,false,false,9,0,0,0
+	HOTFIX ",false,false,false,false,13,0,0,0
+Introduction,General,Previous Question Bank,Agile process - how feature is travelled,"PI -> 3 sprints 1 Innovation&Planning(IP) sprint-> feature -> user story -> task -> sub-task -> bug -> SR ",false,false,false,false,7,0,0,0
+Introduction,General,Previous Question Bank,How will you secure your endpoint,"handle CSRF, middlewere, throttle (DDOS - Distribution of Deniel of service attack), authentication & auhtorization, oauth - clientId",false,false,false,false,19,0,0,0
+Introduction,General,Previous Question Bank,OSI layers,,false,false,false,false,12,0,0,0
+Introduction,General,Previous Question Bank,SOLID & GoF Design Patterns in Java,,false,false,false,false,18,0,0,0
+Introduction,General,Previous Question Bank,How to implement singleton or prototype design pattern,,false,false,false,false,17,0,0,0
+Introduction,General,Previous Question Bank,What is factory design pattern,,false,false,false,false,16,0,0,0
 Introduction,General,Previous Question Bank,What is the use of cors & htaccess,,false,false,false,false,11,0,0,0
 Introduction,General,Previous Question Bank,gzip,,false,false,false,false,10,0,0,0
 OOPS,Inheritance,Previous Question Bank,What is Inheritance & What Relationship it is?,,false,false,false,false,1,1,1,0
@@ -29,7 +29,7 @@ OOPS,Inheritance,Previous Question Bank,default vs static method,,false,false,fa
 OOPS,Pillers,Previous Question Bank,Polymorphism,Static/dynamic Binding or Static / Runtime Polymorphism also called Dynamic Method Dispatch  Example - Method overloading(static) / overriding(dynamic/runtime),false,false,false,false,3,1,0,0
 OOPS,Inheritance,Previous Question Bank,Abstraction,,false,false,false,false,3,1,1,0
 OOPS,Inheritance,Previous Question Bank,Abstract class vs method,"just declared, cant instanciate, sub class can define or override",false,false,false,false,5,1,1,0
-OOPS,Inheritance,Previous Question Bank,Interface,just declared with Default Methods ,false,false,false,false,6,1,1,0
+OOPS,Inheritance,Previous Question Bank,Interface,"just declared with Default Methods ",false,false,false,false,6,1,1,0
 OOPS,Inheritance,Previous Question Bank,Purpose/Difference between abstract class and interface,,false,false,false,false,4,1,1,0
 OOPS,Inheritance,Previous Question Bank,interface types & example,"- Marker / Markable interface (Ex: Cloneable, Serializable) & Functional interface - (Ex: Runnable)",false,false,false,false,7,1,1,0
 OOPS,Inheritance,Previous Question Bank,Can we declare a class as private,Cant declare top-level class only inner class can (cannot be accessed from an object outside the class),false,false,false,false,8,1,1,0
@@ -44,9 +44,9 @@ OOPS,Relationship,Previous Question Bank,Composition,"strong relationship betwee
 OOPS,Misc,Previous Question Bank,Does java support multiple inheritence,No but possible with interface,false,false,false,false,28,1,3,0
 OOPS,Misc,Previous Question Bank,"final, static - variable, method & class",,false,false,false,false,29,1,3,0
 OOPS,Misc,Previous Question Bank,Final vs Finally vs Finalize,"How finalize work, when it will be called -> Garbage collector its called when object is destroyed for cleanup activity ",false,false,false,false,30,1,3,0
-OOPS,Misc,Previous Question Bank,this,reference variable to current object ,false,false,false,false,31,1,3,0
+OOPS,Misc,Previous Question Bank,this,"reference variable to current object ",false,false,false,false,31,1,3,0
 OOPS,Misc,Previous Question Bank,Method Overloading vs Overridding,,false,false,false,false,32,1,3,0
-OOPS,Misc,Previous Question Bank,Super Keyword,calling constructor of a abstract class ,false,false,false,false,33,1,3,0
+OOPS,Misc,Previous Question Bank,Super Keyword,"calling constructor of a abstract class ",false,false,false,false,33,1,3,0
 OOPS,Misc,Previous Question Bank,java instanceof operator,,false,false,false,false,34,1,3,0
 OOPS,Misc,Previous Question Bank,Access Modifiers,,false,false,false,false,35,1,3,0
 OOPS,Misc,Previous Question Bank,Call by Value and Call by Reference in Java,"- There is only call by value in java, not call by reference.",false,false,false,false,36,1,3,0
@@ -72,7 +72,7 @@ Core Java,Misc,Previous Question Bank,initialization blocks / static block,"synt
 Core Java,Misc,Previous Question Bank,types of constructors,"default constructor, arg constructor, copy constructor, static const (not supported), private constructor (restricting object creation)",false,false,false,false,56,3,10,0
 Core Java,Misc,Previous Question Bank,Wrapper class,"int Integer ( used to implement premitive datatypes in synchronization, multithreading )",false,false,false,false,57,3,10,0
 Core Java,Misc,Previous Question Bank,stack vs heap memory,,false,false,false,false,58,3,10,0
-Core Java,Misc,Previous Question Bank,What is Shadowing,overriding outter scope variable value inside block scope ,false,false,false,false,59,3,10,0
+Core Java,Misc,Previous Question Bank,What is Shadowing,"overriding outter scope variable value inside block scope ",false,false,false,false,59,3,10,0
 Core Java,Misc,Previous Question Bank,Static methods vs static block,,false,false,false,false,60,3,10,0
 Core Java,Misc,Previous Question Bank,JDK,"which has  JRE & tool to convert java into class , JVM - load, verify & execute class file , JRE - supporting libraries to run the code",false,false,false,false,61,3,10,0
 Core Java,Misc,Previous Question Bank,JVM internal working,https://medium.com/platform-engineer/understanding-jvm-architecture-22c0ddf09722,false,false,false,false,62,3,10,0
@@ -95,7 +95,7 @@ Core Java,Misc,Previous Question Bank,Why main method in java is public static v
 Core Java,Misc,Previous Question Bank,What is the use of String args[] in main method,,false,false,false,false,78,3,10,0
 Core Java,Misc,Previous Question Bank,Can we have multiple main method in java project,not allowed with class as main method is static but allowed in project level,false,false,false,false,79,3,10,0
 Core Java,Misc,Previous Question Bank,What happens if we run project with 2class having main method,eclipse will pop which class to run,false,false,false,false,80,3,10,0
-Core Java,Misc,Previous Question Bank,Can we override / overload main method in java,can overload by args but cant override as its static method ,false,false,false,false,81,3,10,0
+Core Java,Misc,Previous Question Bank,Can we override / overload main method in java,"can overload by args but cant override as its static method ",false,false,false,false,81,3,10,0
 Core Java,Misc,Previous Question Bank,Is main method compulsory in Java? / what if main method not found in the class ?,https://www.geeksforgeeks.org/main-method-compulsory-java/,false,false,false,false,82,3,10,0
 Core Java,Misc,Previous Question Bank,Program argument vs VM argument differences,,false,false,false,false,83,3,10,0
 Core Java,Collections,Previous Question Bank,synchronized,synchronized keyword ensures that only one thread can enter the method at one time and concurrent collections,false,false,false,false,84,3,2,0
@@ -113,7 +113,7 @@ Core Java,Collections,Previous Question Bank,hashcode() method vs equal,,false,f
 Core Java,Collections,Previous Question Bank,How hashmap internally works - All DSA basic concepts,,false,false,false,false,96,3,2,0
 Core Java,Collections,Previous Question Bank,hash Map vs HashTable,,false,false,false,false,97,3,2,0
 Core Java,Error vs Exception,Previous Question Bank,How do you handle multiple exception types with same exception,,false,false,false,false,98,3,3,0
-Core Java,Error vs Exception,Previous Question Bank,What design pattern is used to implement exception handling,chain of responsibility ,false,false,false,false,99,3,3,0
+Core Java,Error vs Exception,Previous Question Bank,What design pattern is used to implement exception handling,"chain of responsibility ",false,false,false,false,99,3,3,0
 Core Java,Error vs Exception,Previous Question Bank,Diagram,,false,false,false,false,100,3,3,0
 Core Java,Error vs Exception,Previous Question Bank,Checked Exception,,false,false,false,false,101,3,3,0
 Core Java,Error vs Exception,Previous Question Bank,Unchecked Exception,,false,false,false,false,102,3,3,0
@@ -402,8 +402,8 @@ Spring,Spring Cloud,Previous Question Bank,JAR/WAR differece,,false,false,false,
 Spring,Spring Cloud,Previous Question Bank,change default tomcat for spring boot application,,false,false,false,false,343,4,4,0
 Spring,Spring Security,Previous Question Bank,Security & basic config,,false,false,false,false,344,4,5,0
 Spring,Spring Security,Previous Question Bank,"Types of security - Spring default, SAML, Kerberos / LDAP, OAUTH, JWT, OKTA / Open ID Connect (OIDC) / Single sign-on",,false,false,false,false,345,4,5,0
-Introduction,General,Previous Question Bank,What is your Core competency,,false,false,false,false,3,0,0,0
-Introduction,General,Previous Question Bank,Explain Deployment process,,false,false,false,false,4,0,0,0
+Introduction,General,Previous Question Bank,What is your Core competency,,false,false,false,false,1,0,0,0
+Introduction,General,Previous Question Bank,Explain Deployment process,,false,false,false,false,15,0,0,0
 Angular,General Angular,Previous Question Bank,AngularJS vs Angular,,false,false,false,false,1,6,2,0
 Angular,General Angular,Previous Question Bank,AOT vs JIT,,false,false,false,false,2,6,2,0
 Angular,General Angular,Previous Question Bank,interpolation,,false,false,false,false,3,6,2,0
@@ -453,9 +453,9 @@ Solid - GoF,GoF,Previous Question Bank,how to create singleton class,,false,fals
 Core Java,Misc,Previous Question Bank,"what is jvm, jit, jre and their heap memory size",,false,false,false,false,41,3,10,0
 Core Java,Collections,Previous Question Bank,"default capacity of list (10), map (16 buckets), set (16 as internally it is hashmap)",,false,false,false,false,14,3,2,0
 Core Java,Misc,Previous Question Bank,can we have static constructor,,false,false,false,false,42,3,10,0
-Spring,Spring Security,Previous Question Bank,how to know bean class in project, - using actuator,false,false,false,false,5,4,5,0
+Spring,Spring Security,Previous Question Bank,how to know bean class in project," - using actuator",false,false,false,false,5,4,5,0
 Spring,Spring Core,Previous Question Bank,@ComponentScan tells Spring in which packages you have annotated classes which should be managed by Spring,,false,false,false,false,2,4,1,0
-Spring,Spring Core,Previous Question Bank,how-to-load-configuration-classes-from-separate-jars, - @Import(NameOfTheConfigurationYouWantToImport.class),false,false,false,false,3,4,1,0
+Spring,Spring Core,Previous Question Bank,how-to-load-configuration-classes-from-separate-jars," - @Import(NameOfTheConfigurationYouWantToImport.class)",false,false,false,false,3,4,1,0
 Core Java,Multi-threading,Previous Question Bank,Optimistic vs. Pessimistic locking,,false,false,false,false,42,3,4,0
 Spring,Hibernate,Previous Question Bank,Optimistic vs. Pessimistic locking,,false,false,false,false,32,4,2,0
 Spring,Spring Cloud,Previous Question Bank,Hystrix vs Resillence4j,,false,false,false,false,14,4,4,0
@@ -501,14 +501,14 @@ https://javatechonline.com/java-interview-questions/
 https://javatechonline.com/java-coding-interview-questions/",false,false,false,false,0,0,0,1
 Spring,Ecosystem,Previous Question Bank,"Know packages & parent class/interface for any utility, service & libraries impl","- Explain with package name ( Example: Config service is cloud, Detail about Spring boot default/most used @Annotations - Child Annotations )",false,false,false,false,1,4,0,0
 Introduction,General,Interview Tips,Spring realted interview questions in websites,"Spring realted interview questions in interviewbit, javatpoint, github available for Spring, SpringBoot, Hibernate, Microservices, MVC, JPA, JUNIT, Maven, ",false,false,false,false,1,0,0,1
-Introduction,General,Previous Question Bank,Explain your carrer graph so far,,false,false,false,false,12,0,0,0
-Introduction,General,Previous Question Bank,What are the challeges you have faced in current project ?,,false,false,false,false,13,0,0,0
-Introduction,General,Previous Question Bank,What are the technologies that you have worked on so far?,- For me as I learnt softwere basics nuances It is always okay to work in any technical stack,false,false,false,false,14,0,0,0
-Introduction,General,Previous Question Bank,What are the domains that you have worked so far?,,false,false,false,false,15,0,0,0
-Introduction,General,Previous Question Bank,Can you explain architecture of previous project?,,false,false,false,false,16,0,0,0
-Introduction,General,Previous Question Bank,What do you know about <Interview Technology>,,false,false,false,false,17,0,0,0
-Introduction,General,Manageral Round,Why do we prefer <Interview Technology> over other,,false,false,false,false,18,0,0,2
-Introduction,General,Previous Question Bank,"TDD, BDD, Pair Programming",,false,false,false,false,19,0,0,0
+Introduction,General,Previous Question Bank,Explain your carrer graph so far,,false,false,false,false,2,0,0,0
+Introduction,General,Previous Question Bank,What are the challeges you have faced in current project ?,,false,false,false,false,9,0,0,0
+Introduction,General,Previous Question Bank,What are the technologies that you have worked on so far?,- For me as I learnt softwere basics nuances It is always okay to work in any technical stack,false,false,false,false,4,0,0,0
+Introduction,General,Previous Question Bank,What are the domains that you have worked so far?,,false,false,false,false,3,0,0,0
+Introduction,General,Previous Question Bank,Can you explain architecture of previous project?,,false,false,false,false,14,0,0,0
+Introduction,General,Previous Question Bank,What do you know about <Interview Technology>,,false,false,false,false,5,0,0,0
+Introduction,General,Previous Question Bank,Why do we prefer <Interview Technology> over other,,false,false,false,false,6,0,0,0
+Introduction,General,Previous Question Bank,"TDD, BDD, Pair Programming",,false,false,false,false,8,0,0,0
 Spring,Spring Testing,Previous Question Bank,Explain @SpringBootTest,,false,false,false,false,0,4,7,0
 Spring,Spring Testing,Previous Question Bank,@mock ( dependent class ) vs @injectmock ( testing class instance created and we use mockito ),,false,false,false,false,1,4,7,0
 Spring,Spring Testing,Previous Question Bank,how to config junit - coding standard,,false,false,false,false,2,4,7,0
@@ -642,3 +642,4 @@ Spring,Spring MVC,Previous Question Bank,What is spring mvc?,,false,false,false,
 Core Java,Java Strings,Previous Question Bank,"String s1=abc
 String s2=new String(""abc"")
 Will it create two different objects? If yes where?",,false,false,false,false,9,3,7,0
+Introduction,General,Manageral Round,,,false,false,false,false,0,,,

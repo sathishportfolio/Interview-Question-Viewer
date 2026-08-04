@@ -1,5 +1,5 @@
 /* Auto-generated module split from InterviewQuestionViewer_v24.html — verify in a browser before trusting this. */
-import { state, LS_FLAT_GROUP_VIEW } from '../state.js';
+import { state, LS_FLAT_GROUP_VIEW, LS_DRAG_DROP_ON } from '../state.js';
 import { addStatusFilterValue, clearFilters, filterGroupedData, passesFilter, removeStatusFilterValue, resetReviewDoneStarredFilters } from './filters.js';
 import { showSuccessAlert } from './fuzzyHints.js';
 import { render } from './tree.js';
@@ -242,6 +242,27 @@ export function updateGlobalStatsBadges(filteredQuestions) {
       render();
     });
     actionsGroup.appendChild(flatViewToggleBtn);
+
+    // Requirement: Drag & Drop toggle — independent of Edit Mode (drag handles are always
+    // visible now, see .drag-handle in style.css/tree.js). Same rebuilt-fresh-every-render
+    // pattern as flatViewToggleBtn just above: toggles state.dragDropOn + the body.drag-drop-off
+    // class (style.css, hides every .drag-handle which also blocks Sortable from starting a
+    // drag), persists via LS_DRAG_DROP_ON, then render() so the pressed look stays in sync.
+    const dragDropToggleBtn = document.createElement("button");
+    dragDropToggleBtn.type = "button";
+    dragDropToggleBtn.className = "btn btn-sm btn-outline-secondary" + (state.dragDropOn ? " active" : "");
+    dragDropToggleBtn.title = state.dragDropOn
+      ? "Disable drag-and-drop reordering for all accordions"
+      : "Enable drag-and-drop reordering for all accordions";
+    dragDropToggleBtn.setAttribute("aria-pressed", String(!!state.dragDropOn));
+    dragDropToggleBtn.innerHTML = '<i class="fa-solid fa-arrows-up-down-left-right"></i>';
+    dragDropToggleBtn.addEventListener("click", () => {
+      state.dragDropOn = !state.dragDropOn;
+      localStorage.setItem(LS_DRAG_DROP_ON, String(state.dragDropOn));
+      document.body.classList.toggle("drag-drop-off", !state.dragDropOn);
+      render();
+    });
+    actionsGroup.appendChild(dragDropToggleBtn);
 
     const copyPlainBtn = document.createElement("button");
     copyPlainBtn.type = "button";

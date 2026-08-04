@@ -1,5 +1,5 @@
 /* Auto-generated module split from InterviewQuestionViewer_v24.html — verify in a browser before trusting this. */
-import { state, LS_TEMP_MODE, LS_FLAT_GROUP_VIEW, REQUIRED_COLUMNS, LS_FILE_LIST, LS_ACTIVE_FILE, LS_DATA_PREFIX, LS_FILTER_PREFIX, LS_EMPTY_PREFIX, LS_ACTIVE_QUESTION_PREFIX } from './state.js';
+import { state, LS_TEMP_MODE, LS_FLAT_GROUP_VIEW, LS_DRAG_DROP_ON, REQUIRED_COLUMNS, LS_FILE_LIST, LS_ACTIVE_FILE, LS_DATA_PREFIX, LS_FILTER_PREFIX, LS_EMPTY_PREFIX, LS_ACTIVE_QUESTION_PREFIX } from './state.js';
 import { populateFilterOptions } from './components/filters.js';
 import { render } from './components/tree.js';
 import { groupData, toBool, uid } from './utils.js';
@@ -272,6 +272,7 @@ export function activateFile(filename, rows, emptyGroups) {
   populateFilterOptions();
   populateFileSwitcher();
   document.getElementById("downloadProgressBtn").disabled = false;
+  document.getElementById("copyProgressCsvBtn").disabled = false;
   document.getElementById("resetAllBtn").disabled = false;
   render();
 }
@@ -325,6 +326,7 @@ export function resetAllData() {
   state.activeFilters = { Subject: [], Topic: [], SubTopic: [], Status: [] };
 
   document.getElementById("downloadProgressBtn").disabled = true;
+  document.getElementById("copyProgressCsvBtn").disabled = true;
   document.getElementById("resetAllBtn").disabled = true;
   populateFileSwitcher();
   setStatusMsg("All data reset.");
@@ -336,6 +338,9 @@ export function initApp() {
   state.tempMode = storedTemp === null ? true : storedTemp === "true";
   document.getElementById("tempModeToggle").checked = state.tempMode;
   state.flatGroupView = localStorage.getItem(LS_FLAT_GROUP_VIEW) === "true";
+  const storedDragDrop = localStorage.getItem(LS_DRAG_DROP_ON);
+  state.dragDropOn = storedDragDrop === null ? true : storedDragDrop === "true";
+  document.body.classList.toggle("drag-drop-off", !state.dragDropOn);
 
   const list = getFileList();
   const active = getActiveFileName();
@@ -366,8 +371,12 @@ SQL,Joins,Easy,What is the difference between INNER JOIN and LEFT JOIN?,<p>INNER
 SQL,Indexing,Medium,When should you avoid adding an index?,<ul><li>Small tables</li><li>Columns with low cardinality</li><li>Tables with heavy write load</li></ul>,false,false,false,true`;
 }
 
-export function downloadProgress() {
-  if (!state.rawData.length && !state.emptyGroups.length) return;
+// Requirement: the exact CSV text downloadProgress() writes to a file, factored out so the
+// #copyProgressCsvBtn handler (js/app.js — clipboard, for pasting into data.js's csvString) can
+// build the identical text without duplicating the row-shaping logic. Returns "" if there's
+// nothing to export.
+export function buildProgressCsv() {
+  if (!state.rawData.length && !state.emptyGroups.length) return "";
 
   const exportRows = state.rawData
     .filter(r => !r.Duplicate) // duplicates are dropped from the exported progress file
@@ -407,7 +416,12 @@ export function downloadProgress() {
     SubTopicOrder: ""
   }));
 
-  const csv = Papa.unparse(exportRows.concat(emptyRows));
+  return Papa.unparse(exportRows.concat(emptyRows));
+}
+
+export function downloadProgress() {
+  const csv = buildProgressCsv();
+  if (!csv) return;
 
   // 1. Get current date formatted as MMMDD (e.g., "Jul30")
   const now = new Date();

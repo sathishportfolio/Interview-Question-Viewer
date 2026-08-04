@@ -15,11 +15,12 @@
 
 import { state, LS_TEMP_MODE, LS_EDIT_MODE_ON, LS_TIMER } from './state.js';
 import {
-  loadCSV, loadCSVFromString, getDefaultSampleCSV, downloadProgress, switchCSV, resetAllData,
-  initApp
+  loadCSV, loadCSVFromString, getDefaultSampleCSV, downloadProgress, buildProgressCsv, switchCSV,
+  resetAllData, initApp
 } from './api.js';
 import { updateHeaderBreadcrumb } from './components/tree.js';
 import { initPersistedToggle } from './components/toggles.js';
+import { showSuccessAlert } from './components/fuzzyHints.js';
 import {
   updateTimerDisplay, persistTimerIfNeeded, startTimer, watchHeaderHeight, restoreTimer
 } from './components/timer.js';
@@ -44,6 +45,19 @@ document.getElementById("csvInput").addEventListener("change", e => {
   if (file) loadCSV(file);
 });
 document.getElementById("downloadProgressBtn").addEventListener("click", downloadProgress);
+
+// Requirement: copy the same CSV text downloadProgress() would download, to the clipboard
+// instead — for pasting straight into data.js's `csvString` to update the "Load Sample" seed
+// data with the latest progress, no download+open+copy-from-file round trip needed.
+document.getElementById("copyProgressCsvBtn").addEventListener("click", () => {
+  const csv = buildProgressCsv();
+  if (!csv) { alert("No progress data to copy."); return; }
+  navigator.clipboard.writeText(csv).then(() => {
+    showSuccessAlert("Progress CSV copied to clipboard.");
+  }).catch(() => {
+    alert("Copy failed — clipboard access may be blocked by the browser.");
+  });
+});
 document.getElementById("csvSwitcher").addEventListener("change", e => switchCSV(e.target.value));
 document.getElementById("resetAllBtn").addEventListener("click", resetAllData);
 document.getElementById("tempModeToggle").addEventListener("change", e => {

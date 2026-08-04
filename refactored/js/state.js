@@ -24,6 +24,10 @@ export const state = {
   scrollTargetEl: null,
   pendingFocusQid: null,     // set before render() to auto-expand + scroll to a specific question's accordion chain
   editModeOn: false,         // mirrors editModeToggle; while true, render() skips first/last auto-expand
+  dragDropOn: true,          // mirrors #dragDropToggleBtn (stats.js); independent of editModeOn —
+                              // while false, body.drag-drop-off (style.css) hides every .drag-handle,
+                              // which also prevents Sortable from starting a drag (handle-based gating,
+                              // same mechanism editModeOn used to use for drag handles)
   searchableQuestions: [],   // the current filtered question list, for the live search box
   badgeRefs: {},             // key -> { holder: <span>, node: topics|subTopics|questions[] } for live badge sync
   emptyGroups: [],           // [{Subject, Topic, SubTopic}] — Subject/Topic/SubTopic headers kept
@@ -41,6 +45,7 @@ export const LS_TEMP_MODE = "iqv_temp_mode";
 export const LS_TIMER = "iqv_timer_seconds";
 export const LS_EDIT_MODE_ON = "iqv_edit_mode_on";
 export const LS_FLAT_GROUP_VIEW = "iqv_flat_group_view";
+export const LS_DRAG_DROP_ON = "iqv_drag_drop_on";
 export const LS_FILE_LIST = "iqv_files";
 export const LS_ACTIVE_FILE = "iqv_active";
 export const LS_DATA_PREFIX = "iqv_data_";
