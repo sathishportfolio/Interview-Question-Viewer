@@ -1380,25 +1380,27 @@ body.edit-mode-off .subtopic-select-checkbox {
     padding: 1rem .9rem 1.25rem;
   }
 
-  /* Requirement: keep the question text on one line (truncated with an ellipsis, not wrapped
-     onto a second/third line) and shrink the inline copy/search/flag/collapse-all icon row
-     (qInlineActions, createQuestion()) further than its normal .compact sizing — both matter
-     more on a narrow screen where the question text otherwise loses most of its width to those
-     icons. .accordion-button is already a flex container (Bootstrap default); qText just needs
-     permission to shrink (min-width:0) and to actually clip instead of wrap. Scoped to
-     ".accordion-button > .status-icon-row" specifically — that's qInlineActions (nested inside
-     the button); controlsStart/controlsEnd (star / move-status-delete) are direct children of
+  /* Requirement: the question row itself (icons vs. text) never wraps onto a second row — the
+     inline copy/search/flag/collapse-all icon row (qInlineActions, createQuestion()) stays put
+     at the far right, further shrunk beyond its normal .compact sizing since it matters more on
+     a narrow screen. The question TEXT, however, wraps onto multiple lines instead of being
+     ellipsis-truncated (previous behavior) — nothing is hidden, the accordion-button just grows
+     taller to fit; min-width:0 is what lets qText shrink below its content width so it wraps
+     instead of forcing the row wider than the screen. Scoped to ".accordion-button >
+     .status-icon-row" specifically — that's qInlineActions (nested inside the button);
+     controlsStart/controlsEnd (star / move-status-delete) are direct children of
      .accordion-header instead, one level up, so they're untouched here. */
   .q-item .accordion-button {
     flex-wrap: nowrap;
+    align-items: center;
   }
 
   .q-item .q-text-link {
     flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 
   /* Requirement: zero left/right padding on the question accordion-button — every icon row
