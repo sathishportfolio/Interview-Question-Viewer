@@ -25,6 +25,7 @@ import {
   updateTimerDisplay, persistTimerIfNeeded, startTimer, watchHeaderHeight, restoreTimer
 } from './components/timer.js';
 import { initHistoryButtons, undo, redo, clearHistory } from './history.js';
+import { autoSyncOnLoad, manualPull } from './sync.js';
 
 // --- Event Listeners ---
 // (csvInput's change listener is registered once, in the Event wiring block below.)
@@ -61,6 +62,12 @@ document.getElementById("copyProgressCsvBtn").addEventListener("click", () => {
 });
 document.getElementById("csvSwitcher").addEventListener("change", e => switchCSV(e.target.value));
 document.getElementById("resetAllBtn").addEventListener("click", resetAllData);
+
+/* Requirement: manual on-demand Pull (js/sync.js) — everything else about sync is automatic
+   (see autoSyncOnLoad() below), but this one button lets you force a refresh from the cloud
+   right now instead of waiting for the once-per-device on-load check. */
+document.getElementById("pullSyncBtn").addEventListener("click", manualPull);
+
 document.getElementById("tempModeToggle").addEventListener("change", e => {
   state.tempMode = e.target.checked;
   localStorage.setItem(LS_TEMP_MODE, state.tempMode);
@@ -163,3 +170,12 @@ restoreTimer();
 window.addEventListener("beforeunload", persistTimerIfNeeded);
 
 initApp();
+
+/* Requirement: cross-device sync (js/sync.js) is now fully automatic — no Push/Pull buttons.
+   Called last (after initApp() has already rendered from whatever's local) so a first-ever visit
+   shows the app immediately instead of blocking on a prompt() before anything's on screen.
+   autoSyncOnLoad() prompts once (ever) for the JSONBin Master Key/Bin ID if not already known,
+   silently pulls the latest cloud state if it differs from what's local (reloading if so), and
+   installs a background watcher that debounces a push after any local "iqv_"-prefixed change
+   from here on. */
+autoSyncOnLoad();

@@ -8,8 +8,12 @@
 # TOOL TODO
 
 
+
+
+
 # CURRENT PROMPT 
 
+- sync with firebase / JSONBin.io / npoint.io / GitHub Gist / Supabase
 - hide status-icon-btn icon-flag compact if question is not active
 - active-question-breadcrumb-link on click scrolling to question accordian but flash highlight similar to  so i can catch it easily
 - question accordian Clicking empty header space rerenders or scrolls which is affecting my focus, on click of empty space donot rerender or scroll or change accodian position

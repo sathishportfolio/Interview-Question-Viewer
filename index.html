@@ -18,6 +18,12 @@
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 </head>
 
+<!-- Sources 
+
+  https://jsonbin.io/app/bins 
+  
+-->
+
 <!-- PROMPTS TO COPY PASTE INTO THE BROWSER CONSOLE FOR TESTING: -->
 
 <!-- 
@@ -91,6 +97,9 @@ provide these title points in plain html <ul><li></li></ul>
           </div>
           <div class="col-auto">
             <button id="copyProgressCsvBtn" class="btn btn-outline-success" disabled title="Copy progress CSV to clipboard (paste into data.js's csvString to update the latest sample)"><i class="fa-solid fa-copy"></i></button>
+          </div>
+          <div class="col-auto">
+            <button id="pullSyncBtn" class="btn btn-outline-primary" title="Pull the latest data from your JSONBin.io sync bin now, overwriting everything on this device (asks to confirm first)"><i class="fa-solid fa-cloud-arrow-down"></i></button>
           </div>
           <div class="col-auto">
             <select id="csvSwitcher" class="form-select" style="min-width:180px;" disabled>

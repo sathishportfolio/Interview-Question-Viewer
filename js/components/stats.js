@@ -2,7 +2,7 @@
 import { state, LS_FLAT_GROUP_VIEW, LS_DRAG_DROP_ON } from '../state.js';
 import { addStatusFilterValue, clearFilters, filterGroupedData, passesFilter, removeStatusFilterValue, resetReviewDoneStarredFilters } from './filters.js';
 import { showSuccessAlert } from './fuzzyHints.js';
-import { render } from './tree.js';
+import { createCopyDropdown, render } from './tree.js';
 import { flattenQuestions } from '../utils.js';
 
 export function getVisibleGroupedTree() {
@@ -264,44 +264,23 @@ export function updateGlobalStatsBadges(filteredQuestions) {
     });
     actionsGroup.appendChild(dragDropToggleBtn);
 
-    const copyPlainBtn = document.createElement("button");
-    copyPlainBtn.type = "button";
-    copyPlainBtn.className = "btn btn-sm btn-outline-secondary";
-    copyPlainBtn.title = "Copy every currently-visible question, one per line";
-    copyPlainBtn.innerHTML = '<i class="fa-solid fa-list"></i>';
-    copyPlainBtn.addEventListener("click", copyVisibleQuestionsPlain);
-    actionsGroup.appendChild(copyPlainBtn);
+    // Requirement: ONE primary "Copy" button (same dimensions as the toggles just above) with a
+    // Bootstrap dropdown listing every copy format that used to be its own separate icon button
+    // — reuses createCopyDropdown() (components/tree.js), the same shared dropdown wiring the
+    // per-Subject/Topic/SubTopic tree-copy-btn uses.
+    const copyToggleBtn = document.createElement("button");
+    copyToggleBtn.type = "button";
+    copyToggleBtn.className = "btn btn-sm btn-primary";
+    copyToggleBtn.title = "Copy currently-visible questions";
+    copyToggleBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
 
-    const copyStructureAnswerBtn = document.createElement("button");
-    copyStructureAnswerBtn.type = "button";
-    copyStructureAnswerBtn.className = "btn btn-sm btn-outline-secondary";
-    copyStructureAnswerBtn.title = "Copy the currently-visible questions as tab-separated rows, each carrying its full Subject/Topic/SubTopic/Question path";
-    copyStructureAnswerBtn.innerHTML = '<i class="fa-solid fa-table-list"></i>';
-    copyStructureAnswerBtn.addEventListener("click", copyVisibleQuestionsStructureWithAnswer);
-    actionsGroup.appendChild(copyStructureAnswerBtn);
-
-    const copyHierarchyBtn = document.createElement("button");
-    copyHierarchyBtn.type = "button";
-    copyHierarchyBtn.className = "btn btn-sm btn-outline-secondary";
-    copyHierarchyBtn.title = "Copy the currently-visible Subject > Topic > SubTopic > Question tree, tab-indented";
-    copyHierarchyBtn.innerHTML = '<i class="fa-solid fa-sitemap"></i>';
-    copyHierarchyBtn.addEventListener("click", copyVisibleQuestionsHierarchy);
-    actionsGroup.appendChild(copyHierarchyBtn);
-
-    const copyStructureBtn = document.createElement("button");
-    copyStructureBtn.type = "button";
-    copyStructureBtn.className = "btn btn-sm btn-outline-secondary";
-    copyStructureBtn.title = "Copy the currently-visible Subject/Topic/SubTopic structure as tab-separated rows, one per progressive level, excluding questions";
-    copyStructureBtn.innerHTML = '<i class="fa-solid fa-diagram-project"></i>';
-    copyStructureBtn.addEventListener("click", copyVisibleQuestionsStructure);
-    actionsGroup.appendChild(copyStructureBtn);
-
-    const copyHierarchyOnlyBtn = document.createElement("button");
-    copyHierarchyOnlyBtn.type = "button";
-    copyHierarchyOnlyBtn.className = "btn btn-sm btn-outline-secondary";
-    copyHierarchyOnlyBtn.title = "Copy visible hierarchy only (Subjects/Topics/SubTopics, no questions), tab-indented";
-    copyHierarchyOnlyBtn.innerHTML = '<i class="fa-solid fa-folder-tree"></i>';
-    copyHierarchyOnlyBtn.addEventListener("click", copyVisibleHierarchyOnly);
-    actionsGroup.appendChild(copyHierarchyOnlyBtn);
+    const copyDropdown = createCopyDropdown(copyToggleBtn, [
+      { icon: "fa-solid fa-list", label: "Copy questions (plain)", onClick: copyVisibleQuestionsPlain },
+      { icon: "fa-solid fa-table-list", label: "Copy structure + question", onClick: copyVisibleQuestionsStructureWithAnswer },
+      { icon: "fa-solid fa-sitemap", label: "Copy (tab-indented hierarchy)", onClick: copyVisibleQuestionsHierarchy },
+      { icon: "fa-solid fa-diagram-project", label: "Copy structure only", onClick: copyVisibleQuestionsStructure },
+      { icon: "fa-solid fa-folder-tree", label: "Copy hierarchy only", onClick: copyVisibleHierarchyOnly }
+    ], true);
+    actionsGroup.appendChild(copyDropdown);
   }
 }

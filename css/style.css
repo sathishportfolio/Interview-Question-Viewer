@@ -752,6 +752,22 @@ body {
   color: var(--accent);
 }
 
+/* Requirement: the single "Copy" dropdown toggle (createCopyDropdown()/createCopyDropdownButton(),
+   components/tree.js) replacing what used to be up to five separate .tree-copy-btn icons per
+   Subject/Topic/SubTopic header — the wrapping .copy-dropdown span needs to stretch/flex exactly
+   like a plain .tree-copy-btn used to, so the toggle keeps the same 2rem-wide cell dimensions
+   chained flush against .tree-edit-btn/.tree-delete-btn either side of it. Bootstrap's default
+   dropdown-toggle caret is suppressed here (but NOT on the #globalStatsBadges primary Copy
+   button, which keeps it) since any extra width would break that fixed 2rem cell. */
+.copy-dropdown {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.copy-dropdown .tree-copy-btn.dropdown-toggle::after {
+  display: none;
+}
+
 .subtopic-alert-holder .alert {
   font-size: .9rem;
   padding: .55rem .9rem;
@@ -995,6 +1011,7 @@ body.edit-mode-off .quick-add-row,
 body.edit-mode-off .tree-edit-btn,
 body.edit-mode-off .tree-delete-btn,
 body.edit-mode-off .tree-copy-btn,
+body.edit-mode-off .copy-dropdown,
 body.edit-mode-off .select-toggle-btn,
 body.edit-mode-off .q-select-checkbox,
 body.edit-mode-off .bulk-move-bar,

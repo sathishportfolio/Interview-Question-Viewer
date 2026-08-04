@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./docs/**)",
+      "Grep(./docs/**)",
+      "Glob(./docs/**)"
+    ]
+  }
+}

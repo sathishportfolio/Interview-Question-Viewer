@@ -1267,117 +1267,106 @@ export function bulkToggleQuestionStatus(qids, field, label) {
   });
 }
 
-// Requirement: an icon-only copy button for the Subject accordion that flattens every
-// currently-visible question under it to one per line, regardless of Topic/SubTopic nesting —
-// same flattenQuestions() this file already uses for badge stats, same wiring shape as
-// createCopyQuestionsButton() below, just no structure at all in the output.
-export function createPlainCopyButton(getNode) {
-  const btn = document.createElement("span");
-  btn.className = "tree-copy-btn";
-  btn.title = "Copy every currently-visible question under here, one per line";
-  const icon = document.createElement("i");
-  icon.className = "fa-solid fa-list";
-  btn.appendChild(icon);
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const qs = flattenQuestions(getNode());
-    if (!qs.length) { alert("No questions to copy."); return; }
-    const text = qs.map(q => q.Question).join("\n");
-    navigator.clipboard.writeText(text).then(() => {
-      showSuccessAlert(qs.length + " question(s) copied to clipboard.");
-    }).catch(() => {
-      alert("Copy failed — clipboard access may be blocked by the browser.");
-    });
+// Requirement: shared clipboard-write step for every copy dropdown item — builds { text, count }
+// via `buildFn`, alerts `emptyMsg` if there was nothing to copy, otherwise writes to the
+// clipboard and reports success/failure. `unitLabel` is "question"/"row"/"item" — literal
+// "(s)" suffix (not real pluralization) matches every other copied-count message in this file.
+function performCopy(buildFn, emptyMsg, unitLabel) {
+  const { text, count } = buildFn();
+  if (!count) { alert(emptyMsg); return; }
+  navigator.clipboard.writeText(text).then(() => {
+    showSuccessAlert(count + " " + unitLabel + "(s) copied to clipboard.");
+  }).catch(() => {
+    alert("Copy failed — clipboard access may be blocked by the browser.");
   });
-  return btn;
 }
 
-export function createCopyQuestionsButton(getNode, kind, label) {
-  const btn = document.createElement("span");
-  btn.className = "tree-copy-btn";
-  btn.title = kind === "subTopic"
-    ? "Copy all visible questions (one per line)"
-    : "Copy all visible questions (tab-indented hierarchy)";
-  btn.innerHTML = '<i class="fa-solid fa-sitemap"></i>';
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const { text, count } = buildTreeCopyText(getNode(), kind, label);
-    if (!count) { alert("No questions to copy."); return; }
-    navigator.clipboard.writeText(text).then(() => {
-      showSuccessAlert(count + " question(s) copied to clipboard.");
-    }).catch(() => {
-      alert("Copy failed — clipboard access may be blocked by the browser.");
+// Requirement: shared Bootstrap dropdown wrapper for a single "Copy" toggle with multiple copy-
+// format options as menu items — reused for both the per-Subject/Topic/SubTopic tree-copy-btn
+// (below) and the #globalStatsBadges copy button (stats.js), so every "Copy" button in the app
+// opens the same kind of menu instead of a row of separate icon buttons. `toggleEl` is the
+// caller's own button/span (already classed/styled for its context) — this just wires it up as
+// the dropdown toggle and builds the menu from `items` ({ icon, label, onClick }[]).
+export function createCopyDropdown(toggleEl, items, menuEnd) {
+  const wrap = document.createElement("span");
+  wrap.className = "dropdown copy-dropdown";
+
+  toggleEl.classList.add("dropdown-toggle");
+  toggleEl.setAttribute("data-bs-toggle", "dropdown");
+  toggleEl.setAttribute("aria-expanded", "false");
+  wrap.appendChild(toggleEl);
+
+  const menu = document.createElement("ul");
+  menu.className = "dropdown-menu" + (menuEnd ? " dropdown-menu-end" : "");
+  items.forEach(({ icon, label, onClick }) => {
+    const li = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = "#";
+    link.className = "dropdown-item";
+    const iconEl = document.createElement("i");
+    iconEl.className = icon + " me-2";
+    link.appendChild(iconEl);
+    link.appendChild(document.createTextNode(label));
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onClick();
     });
+    li.appendChild(link);
+    menu.appendChild(li);
   });
-  return btn;
+  wrap.appendChild(menu);
+
+  return wrap;
 }
 
-// Requirement: a second copy button — hierarchy only (Subject/Topic/SubTopic names), no
-// Question text — same wiring as createCopyQuestionsButton() above, different icon/util.
-export function createHierarchyCopyButton(getNode, kind, label) {
-  const btn = document.createElement("span");
-  btn.className = "tree-copy-btn";
-  btn.title = "Copy visible hierarchy only (Subjects/Topics/SubTopics, no questions)";
-  const icon = document.createElement("i");
-  icon.className = "fa-solid fa-folder-tree";
-  btn.appendChild(icon);
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const { text, count } = buildHierarchyOnlyCopyText(getNode(), kind, label);
-    if (!count) { alert("No hierarchy to copy."); return; }
-    navigator.clipboard.writeText(text).then(() => {
-      showSuccessAlert(count + " item(s) copied to clipboard.");
-    }).catch(() => {
-      alert("Copy failed — clipboard access may be blocked by the browser.");
-    });
-  });
-  return btn;
-}
+// Requirement: ONE "Copy" button per Subject/Topic/SubTopic header (same .tree-copy-btn
+// dimensions every other tree-level icon button uses) with a dropdown of every copy format that
+// used to be its own separate icon button — Plain, Structure+Question, tab-indented hierarchy,
+// Structure only, and Hierarchy only. The tab-indented-hierarchy and Hierarchy-only formats
+// degenerate to the exact same output as Plain for a SubTopic (no descendants beneath it to
+// nest), so they're left out of its menu — same as those two tree-copy-btn instances being
+// commented out below before this dropdown existed.
+export function createCopyDropdownButton(getNode, kind, label) {
+  const toggle = document.createElement("span");
+  toggle.className = "tree-copy-btn";
+  toggle.title = "Copy options";
+  toggle.innerHTML = '<i class="fa-solid fa-copy"></i>';
 
-// Requirement: two more copy buttons alongside createCopyQuestionsButton()/
-// createHierarchyCopyButton() above — same wiring. Every tree-copy-btn is scoped to its own node
-// plus descendants only, never ancestors (a Topic's copy must not carry its parent Subject, a
-// SubTopic's must not carry Subject/Topic) — `label` here is just this node's own name, matching
-// buildTreeCopyText()'s `label` param (see buildStructureWithAnswerCopyText()/
-// buildStructureOnlyCopyText() in utils.js).
-export function createStructureWithAnswerCopyButton(getNode, kind, label) {
-  const btn = document.createElement("span");
-  btn.className = "tree-copy-btn";
-  btn.title = "Copy visible structure with question (this node's own Topic/SubTopic/Question path per row, no ancestors)";
-  const icon = document.createElement("i");
-  icon.className = "fa-solid fa-table-list";
-  btn.appendChild(icon);
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const { text, count } = buildStructureWithAnswerCopyText(getNode(), kind, label);
-    if (!count) { alert("No questions to copy."); return; }
-    navigator.clipboard.writeText(text).then(() => {
-      showSuccessAlert(count + " row(s) copied to clipboard.");
-    }).catch(() => {
-      alert("Copy failed — clipboard access may be blocked by the browser.");
-    });
-  });
-  return btn;
-}
+  const items = [
+    {
+      icon: "fa-solid fa-list", label: "Copy questions (plain)",
+      onClick: () => performCopy(() => {
+        const qs = flattenQuestions(getNode());
+        return { text: qs.map(q => q.Question).join("\n"), count: qs.length };
+      }, "No questions to copy.", "question")
+    },
+    {
+      icon: "fa-solid fa-table-list", label: "Copy structure + question",
+      onClick: () => performCopy(() => buildStructureWithAnswerCopyText(getNode(), kind, label), "No questions to copy.", "row")
+    }
+  ];
 
-export function createStructureCopyButton(getNode, kind, label) {
-  const btn = document.createElement("span");
-  btn.className = "tree-copy-btn";
-  btn.title = "Copy visible structure only (this node's own Topic/SubTopic path per row, no ancestors, no questions)";
-  const icon = document.createElement("i");
-  icon.className = "fa-solid fa-diagram-project";
-  btn.appendChild(icon);
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const { text, count } = buildStructureOnlyCopyText(getNode(), kind, label);
-    if (!count) { alert("No structure to copy."); return; }
-    navigator.clipboard.writeText(text).then(() => {
-      showSuccessAlert(count + " row(s) copied to clipboard.");
-    }).catch(() => {
-      alert("Copy failed — clipboard access may be blocked by the browser.");
+  if (kind !== "subTopic") {
+    items.push({
+      icon: "fa-solid fa-sitemap", label: "Copy (tab-indented hierarchy)",
+      onClick: () => performCopy(() => buildTreeCopyText(getNode(), kind, label), "No questions to copy.", "question")
     });
+  }
+
+  items.push({
+    icon: "fa-solid fa-diagram-project", label: "Copy structure only",
+    onClick: () => performCopy(() => buildStructureOnlyCopyText(getNode(), kind, label), "No structure to copy.", "row")
   });
-  return btn;
+
+  if (kind !== "subTopic") {
+    items.push({
+      icon: "fa-solid fa-folder-tree", label: "Copy hierarchy only",
+      onClick: () => performCopy(() => buildHierarchyOnlyCopyText(getNode(), kind, label), "No hierarchy to copy.", "item")
+    });
+  }
+
+  return createCopyDropdown(toggle, items);
 }
 
 export function copyAndSearchQuestion(q) {
@@ -1490,11 +1479,7 @@ export function createSubject(subject, topics, parentId, isTarget, selectionCtx)
   editSubjectBtn.title = "Rename Subject";
   editSubjectBtn.textContent = "✎";
   editSubjectBtn.addEventListener("click", () => promptRename("Subject", subject, newName => renameSubject(subject, newName)));
-  const copySubjectPlainBtn = createPlainCopyButton(() => topics);
-  const copySubjectBtn = createCopyQuestionsButton(() => topics, "subject", subject);
-  const copySubjectHierarchyBtn = createHierarchyCopyButton(() => topics, "subject", subject);
-  const copySubjectStructureAnswerBtn = createStructureWithAnswerCopyButton(() => topics, "subject", subject);
-  const copySubjectStructureBtn = createStructureCopyButton(() => topics, "subject", subject);
+  const copySubjectDropdown = createCopyDropdownButton(() => topics, "subject", subject);
 
   // Requirement: delete a whole Subject (and everything under it) from its header, with a
   // confirmation that spells out exactly how much is about to go — this is the one destructive
@@ -1524,11 +1509,7 @@ export function createSubject(subject, topics, parentId, isTarget, selectionCtx)
   header.appendChild(button);
   header.appendChild(editSubjectBtn);
 
-  header.appendChild(copySubjectPlainBtn);
-  header.appendChild(copySubjectStructureAnswerBtn);
-  header.appendChild(copySubjectBtn);
-  header.appendChild(copySubjectStructureBtn);
-  header.appendChild(copySubjectHierarchyBtn);
+  header.appendChild(copySubjectDropdown);
 
   header.appendChild(deleteSubjectBtn);
   item.appendChild(header);
@@ -1663,11 +1644,7 @@ export function createTopic(subject, topic, subTopics, parentId, isTarget, selec
   editTopicBtn.title = "Rename Topic";
   editTopicBtn.textContent = "✎";
   editTopicBtn.addEventListener("click", () => promptRename("Topic", topic, newName => renameTopic(subject, topic, newName)));
-  const copyTopicPlainBtn = createPlainCopyButton(() => subTopics);
-  const copyTopicBtn = createCopyQuestionsButton(() => subTopics, "topic", topic);
-  const copyTopicHierarchyBtn = createHierarchyCopyButton(() => subTopics, "topic", topic);
-  const copyTopicStructureAnswerBtn = createStructureWithAnswerCopyButton(() => subTopics, "topic", topic);
-  const copyTopicStructureBtn = createStructureCopyButton(() => subTopics, "topic", topic);
+  const copyTopicDropdown = createCopyDropdownButton(() => subTopics, "topic", topic);
 
   const deleteTopicBtn = document.createElement("span");
   deleteTopicBtn.className = "tree-delete-btn";
@@ -1692,11 +1669,7 @@ export function createTopic(subject, topic, subTopics, parentId, isTarget, selec
   header.appendChild(button);
   header.appendChild(editTopicBtn);
 
-  header.appendChild(copyTopicPlainBtn);
-  header.appendChild(copyTopicStructureAnswerBtn);
-  header.appendChild(copyTopicBtn);
-  header.appendChild(copyTopicStructureBtn);
-  header.appendChild(copyTopicHierarchyBtn);
+  header.appendChild(copyTopicDropdown);
 
   header.appendChild(deleteTopicBtn);
   item.appendChild(header);
@@ -2081,13 +2054,7 @@ export function createSubTopic(subject, topic, subTopic, questions, parentId, is
   editSubTopicBtn.title = "Rename SubTopic";
   editSubTopicBtn.textContent = "✎";
   editSubTopicBtn.addEventListener("click", () => promptRename("SubTopic", subTopic, newName => renameSubTopic(subject, topic, subTopic, newName)));
-  const copySubTopicPlainBtn = createPlainCopyButton(() => questions);
-  const copySubTopicBtn = createCopyQuestionsButton(() => questions, "subTopic");
-  // Requirement: hierarchy-only copy for a SubTopic has nothing beneath it except questions
-  // (which this excludes by design) — so its own "hierarchy" is just its own name.
-  const copySubTopicHierarchyBtn = createHierarchyCopyButton(() => questions, "subTopic", subTopic);
-  const copySubTopicStructureAnswerBtn = createStructureWithAnswerCopyButton(() => questions, "subTopic", subTopic);
-  const copySubTopicStructureBtn = createStructureCopyButton(() => questions, "subTopic", subTopic);
+  const copySubTopicDropdown = createCopyDropdownButton(() => questions, "subTopic", subTopic);
 
   const deleteSubTopicBtn = document.createElement("span");
   deleteSubTopicBtn.className = "tree-delete-btn";
@@ -2111,11 +2078,7 @@ export function createSubTopic(subject, topic, subTopic, questions, parentId, is
   header.appendChild(button);
   header.appendChild(editSubTopicBtn);
 
-  header.appendChild(copySubTopicPlainBtn);
-  header.appendChild(copySubTopicStructureAnswerBtn);
-  // header.appendChild(copySubTopicBtn);
-  header.appendChild(copySubTopicStructureBtn);
-  // header.appendChild(copySubTopicHierarchyBtn);
+  header.appendChild(copySubTopicDropdown);
 
   header.appendChild(deleteSubTopicBtn);
   item.appendChild(header);
