@@ -165,9 +165,24 @@ function highlightNewGroup(subject, topic, subTopic) {
 
 // Requirement: standardized CSV columns for the "+ Bulk Add (CSV)" / "+ Bulk Copy (CSV)" /
 // "+ Bulk Update (CSV)" trio — real comma-separated CSV (Papa's default delimiter) with a header
-// row. Same shape buildQuestionsCsv() (api.js) already produces for #copyProgressCsvBtn/the whole
-// file, so a Bulk Copy export from any level pastes straight into Bulk Add/Update at any level.
-const BULK_CSV_COLUMNS = ["Subject", "Topic", "SubTopic", "Question", "Answer", "Done", "ReviewLater", "LessImportant", "Starred"];
+// row. Same 13-column shape buildQuestionsCsv() (api.js) already produces for
+// #copyProgressCsvBtn/the whole file, so a Bulk Copy export from any level pastes straight into
+// Bulk Add/Update at any level WITHOUT losing the Order/SubjectOrder/TopicOrder/SubTopicOrder
+// columns — previously only the first 9 were recognized here, so a Bulk Copy → Bulk Add/Update
+// round trip silently dropped those 4 (they just fell back to being recomputed instead of
+// preserved). Order/SubjectOrder/TopicOrder/SubTopicOrder are still optional on a hand-written
+// paste — see parseBulkQuestionsCsv()'s numeric parsing below, which treats a missing/blank/
+// non-numeric cell as "not provided" rather than as 0.
+const BULK_CSV_COLUMNS = ["Subject", "Topic", "SubTopic", "Question", "Answer", "Done", "ReviewLater", "LessImportant", "Starred", "Order", "SubjectOrder", "TopicOrder", "SubTopicOrder"];
+
+// Parses a CSV cell as an optional integer — undefined (not 0) when the cell is missing, blank,
+// or not a valid number, so callers can tell "not provided, fall back to a computed value" apart
+// from an explicit 0.
+function parseOptionalOrder(val) {
+  if (val === undefined || val === null || String(val).trim() === "") return undefined;
+  const n = Number(val);
+  return Number.isFinite(n) ? n : undefined;
+}
 
 // Loose header-name match — case-insensitive and ignoring spaces/underscores/hyphens — so both
 // "ReviewLater" and "Review Later" (or "Less Important"/"LessImportant") match the same column.
@@ -229,10 +244,21 @@ function parseBulkQuestionsCsv(rawText, scope) {
       SubTopic: lastSubTopic,
       Question: keys.Question ? (row[keys.Question] || "").trim() : "",
       Answer: keys.Answer ? (row[keys.Answer] || "") : "",
+      // Requirement: Done/ReviewLater/LessImportant/Starred default to false whenever the column
+      // is missing entirely OR present but blank — toBool() already returns false for both
+      // undefined and "" (js/utils.js), so this was already correct; kept as-is.
       Done: toBool(keys.Done && row[keys.Done]),
       ReviewLater: toBool(keys.ReviewLater && row[keys.ReviewLater]),
       LessImportant: toBool(keys.LessImportant && row[keys.LessImportant]),
-      Starred: toBool(keys.Starred && row[keys.Starred])
+      Starred: toBool(keys.Starred && row[keys.Starred]),
+      // Requirement: preserve Order/SubjectOrder/TopicOrder/SubTopicOrder from a Bulk Copy paste
+      // instead of silently dropping them — undefined (not 0) when absent/blank/non-numeric, so
+      // bulkAddQuestionsCsv()/bulkUpdateQuestionsCsv() below can fall back to a freshly computed
+      // position instead of treating "not provided" as "put it first".
+      Order: keys.Order ? parseOptionalOrder(row[keys.Order]) : undefined,
+      SubjectOrder: keys.SubjectOrder ? parseOptionalOrder(row[keys.SubjectOrder]) : undefined,
+      TopicOrder: keys.TopicOrder ? parseOptionalOrder(row[keys.TopicOrder]) : undefined,
+      SubTopicOrder: keys.SubTopicOrder ? parseOptionalOrder(row[keys.SubTopicOrder]) : undefined
     };
   }).filter(r => r.Question);
   return { rows };
@@ -251,14 +277,20 @@ function bulkAddQuestionsCsv(scope, rawText) {
       if (!r.Subject || !r.Topic || !r.SubTopic) return; // needs a full hierarchy to create a question
       const siblings = state.rawData.filter(x => x.Subject === r.Subject && x.Topic === r.Topic && x.SubTopic === r.SubTopic);
       if (questionExistsIn(siblings, r.Question)) return;
+      // Requirement: a Bulk Copy → Bulk Add round trip preserves the original
+      // Order/SubjectOrder/TopicOrder/SubTopicOrder values when the paste provided them (r.Order
+      // etc. from parseBulkQuestionsCsv()); a hand-written paste that omits those columns falls
+      // back to the same freshly-computed position every other add path uses.
       const ord = getExistingOrder(r.Subject, r.Topic, r.SubTopic);
       const newQ = {
         Subject: r.Subject, Topic: r.Topic, SubTopic: r.SubTopic,
         Question: r.Question, Answer: r.Answer,
         Done: r.Done, ReviewLater: r.ReviewLater, Duplicate: false,
         LessImportant: r.LessImportant, Starred: r.Starred,
-        Order: nextQuestionOrder(r.Subject, r.Topic, r.SubTopic),
-        SubjectOrder: ord.subjectOrder, TopicOrder: ord.topicOrder, SubTopicOrder: ord.subTopicOrder,
+        Order: r.Order !== undefined ? r.Order : nextQuestionOrder(r.Subject, r.Topic, r.SubTopic),
+        SubjectOrder: r.SubjectOrder !== undefined ? r.SubjectOrder : ord.subjectOrder,
+        TopicOrder: r.TopicOrder !== undefined ? r.TopicOrder : ord.topicOrder,
+        SubTopicOrder: r.SubTopicOrder !== undefined ? r.SubTopicOrder : ord.subTopicOrder,
         _id: uid("q")
       };
       state.rawData.push(newQ);
@@ -291,6 +323,14 @@ function bulkUpdateQuestionsCsv(scope, rawText) {
         existing.ReviewLater = r.ReviewLater;
         existing.LessImportant = r.LessImportant;
         existing.Starred = r.Starred;
+        // Requirement: preserve Order/SubjectOrder/TopicOrder/SubTopicOrder on a Bulk Copy →
+        // Bulk Update round trip too — only overwritten when the paste actually provided a
+        // value, so a hand-written update paste that omits those columns leaves the existing
+        // question's position untouched.
+        if (r.Order !== undefined) existing.Order = r.Order;
+        if (r.SubjectOrder !== undefined) existing.SubjectOrder = r.SubjectOrder;
+        if (r.TopicOrder !== undefined) existing.TopicOrder = r.TopicOrder;
+        if (r.SubTopicOrder !== undefined) existing.SubTopicOrder = r.SubTopicOrder;
         updated++;
         lastQid = existing._id;
         lastGroup = { subject: r.Subject, topic: r.Topic, subTopic: r.SubTopic };
@@ -301,8 +341,10 @@ function bulkUpdateQuestionsCsv(scope, rawText) {
           Question: r.Question, Answer: r.Answer,
           Done: r.Done, ReviewLater: r.ReviewLater, Duplicate: false,
           LessImportant: r.LessImportant, Starred: r.Starred,
-          Order: nextQuestionOrder(r.Subject, r.Topic, r.SubTopic),
-          SubjectOrder: ord.subjectOrder, TopicOrder: ord.topicOrder, SubTopicOrder: ord.subTopicOrder,
+          Order: r.Order !== undefined ? r.Order : nextQuestionOrder(r.Subject, r.Topic, r.SubTopic),
+          SubjectOrder: r.SubjectOrder !== undefined ? r.SubjectOrder : ord.subjectOrder,
+          TopicOrder: r.TopicOrder !== undefined ? r.TopicOrder : ord.topicOrder,
+          SubTopicOrder: r.SubTopicOrder !== undefined ? r.SubTopicOrder : ord.subTopicOrder,
           _id: uid("q")
         };
         state.rawData.push(newQ);
@@ -411,7 +453,11 @@ export function createBulkQuestionCsvTools(scope, getRows, getEmptyGroups) {
       scope.SubTopic || "Sample SubTopic",
       action === "update" ? "Existing question text (matched exactly, case-insensitive)" : "Sample question text",
       "Sample answer (HTML allowed)",
-      "false", "false", "false", "false"
+      "false", "false", "false", "false",
+      // Order/SubjectOrder/TopicOrder/SubTopicOrder — left blank in the sample on purpose: these
+      // are optional (see parseOptionalOrder()/BULK_CSV_COLUMNS above), a hand-written paste can
+      // just omit them and get a freshly computed position instead.
+      "", "", "", ""
     ];
   }
 
@@ -423,7 +469,7 @@ export function createBulkQuestionCsvTools(scope, getRows, getEmptyGroups) {
     const hint = document.createElement("div");
     hint.className = "small text-muted mb-1";
     hint.textContent = "Comma-separated CSV, first row must be a header: " + BULK_CSV_COLUMNS.join(",") +
-      ". Columns can appear in any order" +
+      ". Columns can appear in any order, and Order/SubjectOrder/TopicOrder/SubTopicOrder can be left blank to get a freshly computed position instead" +
       (scopeNoun ? "; leave Subject/Topic/SubTopic blank to use this " + scopeNoun + "." : ".") +
       " A blank Subject/Topic/SubTopic cell reuses that column's last non-blank value from a row above it, so you only have to write each one once when several rows in a row share it." +
       (action === "update" ? " Rows matching an existing question (by Subject/Topic/SubTopic/Question) update it in place; unmatched rows are added as new." : "");
