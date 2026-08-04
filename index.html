@@ -98,8 +98,13 @@ provide these title points in plain html <ul><li></li></ul>
           <div class="col-auto">
             <button id="copyProgressCsvBtn" class="btn btn-outline-success" disabled title="Copy progress CSV to clipboard (paste into data.js's csvString to update the latest sample)"><i class="fa-solid fa-copy"></i></button>
           </div>
-          <div class="col-auto">
+          <div class="col-auto d-flex align-items-center gap-1">
             <button id="pullSyncBtn" class="btn btn-outline-primary" title="Pull the latest data from your JSONBin.io sync bin now, overwriting everything on this device (asks to confirm first)"><i class="fa-solid fa-cloud-arrow-down"></i></button>
+            <!-- Requirement: small round badge showing current JSONBin free-tier usage (%) —
+                 hidden until sync.js's updateUsageBadge() (js/sync.js) has a real number to show
+                 (every push/pull, plus once from local data on load); green under 90%, red at or
+                 above it. -->
+            <span id="syncUsageBadge" class="sync-usage-badge" style="display:none;" title="JSONBin free-tier usage"></span>
           </div>
           <div class="col-auto">
             <select id="csvSwitcher" class="form-select" style="min-width:180px;" disabled>

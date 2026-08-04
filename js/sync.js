@@ -22,7 +22,12 @@
  *   can't be silent.
  * - Every push/pull logs the compressed payload size against JSONBin's 100kb free-tier cap
  *   (logSyncSize()) — "<usedKB>KB / 100KB (<pct>% of cap used)" — so it's easy to see at a
- *   glance how much headroom is left before a future export might not fit even compressed.
+ *   glance how much headroom is left before a future export might not fit even compressed. The
+ *   same percentage also drives a small round badge (#syncUsageBadge, index.html, next to
+ *   #pullSyncBtn — updateUsageBadge()): green under 90%, red at/above it. refreshUsageBadge()
+ *   additionally computes it from local data alone (no network round trip) once on every
+ *   autoSyncOnLoad(), so the badge has something to show immediately, not just after the first
+ *   push/pull of the session.
  * - manualPull() (#pullSyncBtn, index.html, right after #copyProgressCsvBtn) is the one
  *   deliberately non-automatic action left — unlike the paths above it CAN prompt for missing
  *   credentials and always confirms before overwriting, since it's an explicit click, not a
@@ -59,8 +64,34 @@ const JSONBIN_CAP_KB = 100;
 // value (the `{ gz: "<base64>" }` envelope), not just the base64 string alone.
 function logSyncSize(direction, bodyLength) {
   const usedKb = bodyLength / 1024;
-  const pct = (usedKb / JSONBIN_CAP_KB * 100).toFixed(1);
-  console.log("[sync] " + direction + ": " + usedKb.toFixed(1) + "KB / " + JSONBIN_CAP_KB + "KB (" + pct + "% of JSONBin free-tier cap used)");
+  const pct = usedKb / JSONBIN_CAP_KB * 100;
+  console.log("[sync] " + direction + ": " + usedKb.toFixed(1) + "KB / " + JSONBIN_CAP_KB + "KB (" + pct.toFixed(1) + "% of JSONBin free-tier cap used)");
+  updateUsageBadge(pct);
+}
+
+// Requirement: small round badge next to #pullSyncBtn (index.html) showing this percentage at a
+// glance — green under 90%, red at/above it. Every push/pull already runs through logSyncSize()
+// above, so hooking the badge update in there covers both automatically; refreshUsageBadge()
+// below additionally computes it from local data alone (no network round trip) so the badge has
+// something to show immediately on load, before any push/pull has happened yet this session.
+function updateUsageBadge(pct) {
+  const badge = document.getElementById("syncUsageBadge");
+  if (!badge) return;
+  const rounded = Math.round(pct);
+  badge.textContent = rounded + "%";
+  badge.classList.toggle("usage-high", pct >= 90);
+  badge.title = "JSONBin free-tier usage: " + pct.toFixed(1) + "% of " + JSONBIN_CAP_KB + "KB cap";
+  badge.style.display = "inline-flex";
+}
+
+async function refreshUsageBadge() {
+  try {
+    const gz = await gzipToBase64(JSON.stringify(collectSyncPayload()));
+    logSyncSize("local", JSON.stringify({ gz }).length);
+  } catch (err) {
+    // Compression unsupported or failed — badge just stays hidden, nothing else depends on it.
+    console.error("[sync] usage badge: couldn't compute local size —", err.message);
+  }
 }
 
 function getMasterKey() {
@@ -341,4 +372,10 @@ export async function autoSyncOnLoad() {
   const masterKey = getMasterKey();
   const binId = getBinId();
   if (masterKey && binId) await silentPull(masterKey, binId);
+
+  // Requirement: the usage badge (#syncUsageBadge, index.html) should show something as soon as
+  // the app loads, not just after the first push/pull of this session. If silentPull() just
+  // triggered a reload above, this becomes a no-op (the page is already navigating away) — no
+  // separate guard needed for that.
+  await refreshUsageBadge();
 }

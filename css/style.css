@@ -97,6 +97,29 @@ body {
   border-radius: .5rem;
 }
 
+/* Requirement: small round badge next to #pullSyncBtn showing the current JSONBin free-tier
+   usage percentage — updateUsageBadge() (js/sync.js) sets its text/color and flips it visible.
+   Green by default (under 90%); .usage-high (>=90%) switches it red as a "running low on space"
+   warning. */
+.sync-usage-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  font-size: .62rem;
+  font-weight: 700;
+  color: #fff;
+  background: #2fb350;
+  transition: background-color .2s ease;
+}
+
+.sync-usage-badge.usage-high {
+  background: #dc3545;
+}
+
 .accordion-button {
   font-weight: 600;
 }
