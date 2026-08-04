@@ -841,9 +841,14 @@ export function render() {
   // below only get Select/Select All, not a redundant copy of this toolbar. Its own toolbar
   // shares one row with Select/Select All (all select/bulk-action buttons side-by-side); the Add/
   // Update textareas still unfold on their own row below via csvTools.panelsWrap.
+  // Requirement: "+ Bulk Copy (CSV)" at the root should export only the CURRENTLY FILTERED
+  // questions (whatever the Subject/Topic/SubTopic/Status filters narrow the view down to,
+  // `filteredQuestions` above), not every question in the whole file regardless of filters —
+  // copying the entire dataset every time made for a much bigger clipboard payload than the user
+  // usually wants when they've deliberately filtered down to a subset first.
   const csvTools = createBulkQuestionCsvTools(
     { Subject: null, Topic: null, SubTopic: null },
-    () => state.rawData,
+    () => filteredQuestions,
     () => state.emptyGroups
   );
   const subjectControlsRow = document.createElement("div");
