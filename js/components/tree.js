@@ -119,11 +119,8 @@ export function moveQuestionByStep(q, direction) {
   highlightMovedQuestion(q._id);
 }
 
-// `sourceCtx` (optional) passes straight through to flashHighlightItem() — e.g. a
-// { jumpBack, jumpBackLabel } pair so the flash highlight itself carries a "return to where I
-// was" icon (see the Starred toggle below, which is the one caller that currently uses this).
-export function highlightMovedQuestion(qid, sourceCtx) {
-  flashHighlightItem(document.querySelector('[data-qid="' + qid + '"]'), sourceCtx);
+export function highlightMovedQuestion(qid) {
+  flashHighlightItem(document.querySelector('[data-qid="' + qid + '"]'));
 }
 
 export function reorderSubjects(newOrderNames) {
@@ -2817,23 +2814,37 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
   const starBtn = createStatusIconToggle({
     key: "star", icon: "fa-solid fa-star", label: "Starred", initial: !!q.Starred, compact: true,
     onToggle: active => withHistory(() => {
+      // Requirement: starring must NOT auto-scroll the view (mobile or desktop) — it reorders
+      // `q` to the top of its SubTopic, but the user should stay looking at exactly what was
+      // already open/visible, not get yanked to the new position. Uses the same
+      // captureOpenState()/render()/restoreOpenState()/restoreScrollAfter() idiom every other
+      // "mutate without jumping anywhere" action in this file uses (bulkDeleteQuestions(),
+      // bulkToggleQuestionStatus() above) instead of the old pendingFocusQid+scrollIntoView
+      // approach, which always jumped to `q`'s new spot.
+      //
+      // Since `q` itself relocates, capture whichever sibling was sitting directly next to it
+      // BEFORE the reorder (prefer the one after it, falling back to the one before) — that
+      // sibling stays put, so it's a stable anchor a "scroll back to where you were" link can
+      // flash-highlight afterward, letting the user deliberately opt into seeing where things
+      // ended up instead of it being forced on them.
+      const siblingsBefore = (state.grouped[q.Subject] && state.grouped[q.Subject][q.Topic] && state.grouped[q.Subject][q.Topic][q.SubTopic]) || [];
+      const idx = siblingsBefore.findIndex(r => r._id === q._id);
+      const adjacent = idx === -1 ? null : (siblingsBefore[idx + 1] || siblingsBefore[idx - 1] || null);
+
       q.Starred = active;
       persistCurrentProgress();
-      // Requirement: starring jumps the view to the question's new (moved-to-top) position and
-      // flashes it, same as before — but now that flash carries a "jump back" icon
-      // (sourceCtx.jumpBack, flashHighlightItem()/fuzzyHints.js) that smoothly scrolls back to
-      // exactly where the user was reading before the star action moved things around, so
-      // continuity isn't lost just because the list reordered underneath them.
-      const scrollYBeforeMove = window.scrollY;
-      // Re-sort this SubTopic so Starred stays first, then jump back to the question
-      // (its index number will have changed) and flash it so the move is obvious.
+      const openState = captureOpenState();
+      const scrollY = window.scrollY;
+      // Re-sort this SubTopic so Starred stays first.
       state.grouped = groupData(state.rawData, state.emptyGroups);
-      state.pendingFocusQid = q._id;
       render();
-      highlightMovedQuestion(q._id, {
-        jumpBack: () => window.scrollTo({ top: scrollYBeforeMove, left: 0, behavior: "smooth" }),
-        jumpBackLabel: "Scroll back to where you were"
-      });
+      restoreOpenState(openState);
+      restoreScrollAfter(scrollY);
+
+      if (adjacent) {
+        showSubTopicAlert(q.Subject, q.Topic, q.SubTopic, "info",
+          "Scroll back to where you were", adjacent._id);
+      }
     })
   });
 

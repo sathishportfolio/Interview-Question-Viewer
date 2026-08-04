@@ -1398,13 +1398,13 @@ body.edit-mode-off .subtopic-select-checkbox {
   /* Requirement: Star (controlsStart), the question text+copy/search (accordion-button), and
      the Move/status-cluster/Delete icons (controlsEnd — only actually visible while Edit Mode is
      on; see the :last-of-type hiding rule above) must never fight each other for width by
-     squeezing the question text down to nothing. controlsStart/controlsEnd both carry
-     flex:0 0 auto (.status-icon-row.compact, non-mobile — they never shrink) and qText below
-     gets a min-width FLOOR instead of 0, so once every item's minimum width is accounted for and
-     still doesn't fit a narrow screen, the header just scrolls horizontally (overflow-x:auto)
-     instead of compressing anything illegibly. Star/text/copy/search sit first in DOM/flex
-     order, so they're already the visible portion by default — only controlsEnd, at the end,
-     ever needs a swipe to reach. */
+     squeezing/clipping/overlapping. controlsStart/controlsEnd both carry flex:0 0 auto
+     (.status-icon-row.compact, non-mobile — they never shrink); accordion-button/qText below are
+     also flex:0 0 auto while Edit Mode is on (their full, untruncated content width). So once
+     every item's natural width no longer fits a narrow screen, the header just scrolls
+     horizontally (overflow-x:auto) as one unit instead of compressing/clipping any single piece.
+     Star/text/copy/search sit first in DOM/flex order, so they're already the visible portion by
+     default — only controlsEnd, at the end, ever needs a swipe to reach. */
   .q-item .accordion-header {
     min-height: 3rem;
     flex-wrap: nowrap;
@@ -1425,38 +1425,41 @@ body.edit-mode-off .subtopic-select-checkbox {
   .q-item .accordion-button {
     flex-wrap: nowrap;
     align-items: center;
-    /* Standard flexbox "let a shrinkable child actually shrink" fix — without this, the
-       button's own automatic min-width (based on qText's full, unshrunk content) would win out
-       over qText's explicit 6rem floor below, defeating the point of that floor. */
+  }
+
+  /* Requirement: while Edit Mode is ON (default — no body.edit-mode-off class), show the FULL
+     question text on one line — no wrapping, no ellipsis-truncation. qText/its accordion-button
+     both get flex:0 0 auto (their natural, un-shrunk content width) instead of being allowed to
+     compress: if the full row (drag/Star/text/copy-search/controlsEnd) doesn't fit the screen,
+     .accordion-header's own overflow-x:auto (above) scrolls the WHOLE row horizontally as one
+     unit rather than squeezing or clipping any single piece — which is what previously risked
+     qText's content visually spilling over/under controlsEnd's icons instead of cleanly
+     scrolling past them. */
+  .q-item .accordion-button {
+    flex: 0 0 auto;
+  }
+
+  .q-item .q-text-link {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* Requirement: while Edit Mode is OFF (the read-only mobile view), go back to a normally
+     shrinkable/growable button+qText — full-width row, text wraps onto multiple lines instead of
+     the Edit-Mode-ON single-line/full-width behavior above, and the accordion-button just grows
+     taller to fit rather than scrolling sideways. Needs body.edit-mode-off's extra specificity to
+     win over the Edit-Mode-ON default above without !important. */
+  body.edit-mode-off .q-item .accordion-button {
+    flex: 1 1 auto;
     min-width: 0;
   }
 
-  /* Requirement: the question TEXT stays single-line (ellipsis-truncated, not wrapped) by
-     default — this is what applies while Edit Mode is ON, keeping every accordion row the same
-     consistent height while editing. min-width used to be 0 (lets qText shrink freely, down to
-     nothing once controlsEnd's icons need the room) — now a 6rem FLOOR instead: qText still
-     shrinks to fit when there's room, but never below a readable width. Once every item's
-     minimum (this floor plus Star/copy/search's own fixed widths) no longer fits, the
-     .accordion-header itself scrolls horizontally instead (overflow-x:auto, see above) rather
-     than continuing to compress the text past legibility. */
-  .q-item .q-text-link {
+  body.edit-mode-off .q-item .q-text-link {
     flex: 1 1 auto;
     min-width: 6rem;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-
-  /* Requirement: while Edit Mode is OFF (the read-only mobile view), let the question text wrap
-     onto multiple lines instead — nothing hidden behind an ellipsis, the accordion-button just
-     grows taller to fit. Needs body.edit-mode-off's extra specificity to win over the
-     single-line default above without !important. */
-  body.edit-mode-off .q-item .q-text-link {
-    overflow: visible;
     white-space: normal;
     overflow-wrap: break-word;
     word-break: break-word;
-    text-overflow: clip;
   }
 
   /* Requirement: zero left/right padding on the question accordion-button — every icon row
