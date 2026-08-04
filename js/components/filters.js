@@ -69,6 +69,19 @@ export function computeAvailableOptions(dimension) {
     const matchSubTopic = dimension === "SubTopic" || !state.activeFilters.SubTopic.length || state.activeFilters.SubTopic.includes(r.SubTopic);
     if (matchSubject && matchTopic && matchSubTopic) values.add(r[dimension]);
   });
+  // Requirement: #filterCard's Subject/Topic/SubTopic dropdowns must keep listing a group even
+  // when it has zero real question rows yet — a Subject/Topic/SubTopic that exists only as a
+  // state.emptyGroups marker (README-AI.md #6 — created via markGroupEmpty(), e.g. a freshly
+  // bulk-added Subject with no Topics under it yet) never appears in state.rawData, so the loop
+  // above alone would leave it out of the filter entirely.
+  (state.emptyGroups || []).forEach(g => {
+    const val = g[dimension];
+    if (!val) return; // a shallower marker (e.g. Topic/SubTopic null) has nothing to add at this dimension
+    const matchSubject = dimension === "Subject" || !state.activeFilters.Subject.length || state.activeFilters.Subject.includes(g.Subject);
+    const matchTopic = dimension === "Topic" || !state.activeFilters.Topic.length || state.activeFilters.Topic.includes(g.Topic);
+    const matchSubTopic = dimension === "SubTopic" || !state.activeFilters.SubTopic.length || state.activeFilters.SubTopic.includes(g.SubTopic);
+    if (matchSubject && matchTopic && matchSubTopic) values.add(val);
+  });
   return [...values].sort();
 }
 
