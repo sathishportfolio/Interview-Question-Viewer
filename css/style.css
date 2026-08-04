@@ -14,10 +14,21 @@
   --flash-line: #e0a800;
 }
 
+/* Requirement: fixed-position elements (.floating-toggles, .app-header on desktop,
+   .global-alert-holder) are positioned against the document's initial containing block — if
+   anything ever overflows the viewport horizontally, that block grows wider than the screen and
+   every "right:"-offset fixed element ends up needing a horizontal scroll to reach, even though
+   it never visually moved. Blocking horizontal overflow at the root is the standard fix, and
+   cheap insurance regardless of which element would have caused it. */
+html {
+  overflow-x: hidden;
+}
+
 body {
   background: var(--paper);
   color: var(--ink);
   font-family: 'Segoe UI', system-ui, sans-serif;
+  overflow-x: hidden;
 }
 
 /* App header is now always fixed/floating at the top of the viewport. */
@@ -98,6 +109,14 @@ body {
 
 .accordion-button:focus {
   box-shadow: 0 0 0 .2rem rgba(52, 87, 213, .2);
+}
+
+/* Requirement: remove Bootstrap's default expand/collapse caret across every accordion in the
+   app (Subject/Topic/SubTopic/Question, plus the flat grouped view) — the whole row is already
+   clickable/tappable via qText's own toggle logic (see createQuestion(), tree.js), so the caret
+   is a redundant, non-functional decoration rather than the actual toggle control. */
+.accordion-button::after {
+  display: none !important;
 }
 
 /* question level styling */
@@ -710,9 +729,16 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
 }
 
+/* Requirement: Bootstrap's .btn-outline-secondary (the base class every floating toggle uses)
+   is transparent by default — only filling with color on hover/focus — so with the button
+   fixed on top of scrolling content, whatever's underneath (question text, etc.) showed
+   through. An explicit opaque background fixes that regardless of hover/checked state; the
+   existing box-shadow (.btn-rounded) already gives it enough visual separation from the page
+   behind it. */
 .floating-toggle-item {
   cursor: pointer;
   user-select: none;
+  background: #fff;
 }
 
 .floating-toggle-item:has(input:checked) {
@@ -1213,12 +1239,27 @@ body.edit-mode-off .subtopic-select-checkbox {
    this hiding: they live inside .accordion-button itself, not as a direct child of
    .accordion-header, which is what distinguishes them from the controlsStart/controlsEnd status
    rows below and keeps them reachable here.
+   Requirement: this read-only stripping is itself gated on Edit Mode being OFF
+   (body.edit-mode-off) — with Edit Mode ON, mobile shows every control exactly like desktop
+   does, no conditional hiding at all. Only the layout/spacing tweaks below (header no longer
+   fixed, bigger touch targets) apply unconditionally, since those aren't about hiding controls.
    ========================================================================== */
 @media (max-width: 768px) {
 
-  #controlsWrapper,
-  .timer-widget {
+  /* Requirement: #filterCardToggleLink/#filterCard must stay visible+usable while Edit Mode is
+     off — they're deliberately NOT covered here. The CSV/timer toolbar itself is already hidden
+     while Edit Mode is off by the app-wide body.edit-mode-off .toolbar-card rule earlier in this
+     file (not mobile-specific), so #controlsWrapper (the shared ancestor of the toolbar AND the
+     filter link/card) must never be hidden wholesale here — doing so would take the filter
+     controls down with it. */
+  body.edit-mode-off .timer-widget {
     display: none !important;
+  }
+
+  /* Requirement: clear separation between the (no longer fixed) header and the stats badges
+     row right below it. */
+  #globalStatsBadges {
+    margin-top: 1.25rem;
   }
 
   /* Requirement: the header shouldn't stay pinned on mobile — it eats vertical space on an
@@ -1230,27 +1271,94 @@ body.edit-mode-off .subtopic-select-checkbox {
   .app-header {
     position: static;
     box-shadow: none;
+    padding: .6rem 0;
   }
 
   body {
     padding-top: 0 !important;
   }
 
-  /* Requirement: hide the Done/Review/Duplicate/Less/Star status cluster, the Move and Delete
-     icons, the drag handle, and the bulk-select checkbox — everything editing-related in a
-     question header except the three inline Question Actions inside the button itself (see
-     comment above; those live at .accordion-header > .accordion-button > .status-icon-row, one
-     level deeper than the selector below, so they're untouched). */
-  .q-item .accordion-header>.status-icon-row,
-  .q-item .drag-handle,
-  .q-item .q-select-checkbox {
+  /* Requirement: the floating toggle button must stay visible without scrolling on mobile — it
+     was already position:fixed, but a right:/bottom:-offset fixed element only actually stays
+     put if nothing on the page overflows horizontally (see the html/body overflow-x:hidden rule
+     near the top of this file, the real fix); this re-declaration is belt-and-suspenders,
+     pinning it with !important plus mobile-appropriate (smaller) offsets so it can never be
+     knocked out of position by some other rule and always sits within the visible screen. */
+  .floating-toggles {
+    position: fixed !important;
+    right: 1rem !important;
+    bottom: 1rem !important;
+    left: auto !important;
+    top: auto !important;
+  }
+
+  /* Requirement: compact header — title, breadcrumb, and timer widget all shrink so the header
+     fits in noticeably less vertical space, instead of desktop-sized text/padding eating a big
+     chunk of an already-small screen. */
+  .app-header .container {
+    gap: .5rem;
+  }
+
+  .app-header h1 {
+    font-size: 1.15rem;
+  }
+
+  .header-breadcrumb {
+    font-size: .72rem;
+    min-height: 0;
+  }
+
+  .timer-widget {
+    padding: .3rem .5rem;
+    gap: .4rem;
+  }
+
+  .timer-widget .timer-display {
+    font-size: .95rem;
+    min-width: 4.5ch;
+  }
+
+  .timer-widget .btn {
+    padding: .2rem .55rem;
+    font-size: .75rem;
+  }
+
+  /* Requirement: hide the Move/Done/Review/Duplicate/Less-Important/Delete cluster (controlsEnd
+     in createQuestion(), tree.js) plus the drag handle and bulk-select checkbox — everything
+     editing-related in a question header except the three inline Question Actions inside the
+     button itself (comment above) AND the Starred icon (controlsStart — its own requirement:
+     Starred stays visible/enabled on mobile regardless of Edit Mode). controlsStart/controlsEnd
+     share an identical class ("status-icon-row compact") with nothing else to distinguish them
+     by, but they're the only two <div>s the header has as direct children (button is a <button>,
+     the drag handle/select-checkbox aren't status-icon-rows at all) — controlsEnd is always the
+     second/last one in DOM order, so :last-of-type reaches it without touching controlsStart.
+     Edit-Mode-gated (see file comment above) — the .status-icon-row/.q-select-checkbox part is
+     only a mobile-specific addition, since body.edit-mode-off already hides .q-select-checkbox
+     app-wide (see the desktop rule earlier in this file); .drag-handle is deliberately left out
+     of that desktop rule (README-AI.md #20/#20a — it has its own independent Drag & Drop toggle),
+     so it's listed here explicitly to fold it into mobile's read-only behavior while Edit Mode is
+     off. */
+  body.edit-mode-off .q-item .accordion-header>.status-icon-row:last-of-type,
+  body.edit-mode-off .q-item .drag-handle,
+  body.edit-mode-off .q-item .q-select-checkbox {
+    display: none !important;
+  }
+
+  /* Requirement: opening a no-answer question expands only an empty container — no stray
+     visible markup (e.g. an empty "<p></p>" the Answer cell might contain). answerContent gets
+     .answer-content-empty whenever q.Answer is blank (createQuestion()/the answer-save handler,
+     tree.js). */
+  .answer-content-empty {
     display: none !important;
   }
 
   /* Requirement: read-only answer body — no Edit Question, move-up/down/top/bottom, or
-     Edit/Add Answer buttons. */
-  .answer-body .status-controls,
-  .answer-body .answer-edit-row {
+     Edit/Add Answer buttons. .answer-edit-row is normally NOT Edit-Mode-gated anywhere else in
+     this app (README-AI.md #20 — Edit Answer stays visible regardless of Edit Mode elsewhere),
+     but on mobile specifically it's folded into this Edit-Mode-gated read-only behavior so
+     turning Edit Mode on shows genuinely everything, with no exceptions. */
+  body.edit-mode-off .answer-body .status-controls,
+  body.edit-mode-off .answer-body .answer-edit-row {
     display: none !important;
   }
 
@@ -1270,6 +1378,67 @@ body.edit-mode-off .subtopic-select-checkbox {
 
   .accordion-body.answer-body {
     padding: 1rem .9rem 1.25rem;
+  }
+
+  /* Requirement: keep the question text on one line (truncated with an ellipsis, not wrapped
+     onto a second/third line) and shrink the inline copy/search/flag/collapse-all icon row
+     (qInlineActions, createQuestion()) further than its normal .compact sizing — both matter
+     more on a narrow screen where the question text otherwise loses most of its width to those
+     icons. .accordion-button is already a flex container (Bootstrap default); qText just needs
+     permission to shrink (min-width:0) and to actually clip instead of wrap. Scoped to
+     ".accordion-button > .status-icon-row" specifically — that's qInlineActions (nested inside
+     the button); controlsStart/controlsEnd (star / move-status-delete) are direct children of
+     .accordion-header instead, one level up, so they're untouched here. */
+  .q-item .accordion-button {
+    flex-wrap: nowrap;
+  }
+
+  .q-item .q-text-link {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* Requirement: zero left/right padding on the question accordion-button — every icon row
+     (Starred outside it, copy/search inside it) supplies its own slight edge padding/margin
+     instead, so the button itself contributes none, keeping the header as tight as possible.
+     !important because this was still losing to another same-specificity ".q-item
+     .accordion-button" rule earlier in this file (base, non-mobile, sets padding-left: 0px but
+     leaves padding-right at Bootstrap's default) — later-in-file same-specificity mobile rules
+     should win on their own, but !important makes that non-negotiable regardless of ordering. */
+  .q-item .accordion-button {
+    padding-left: 0 !important;
+    padding-right: 5px !important;
+  }
+
+  .q-item .accordion-button>.status-icon-row {
+    flex: 0 0 auto;
+    gap: .15rem;
+    padding: 0;
+    margin-left: .3rem !important;
+  }
+
+  .q-item .accordion-button>.status-icon-row .icon-glyph {
+    width: 1.35rem;
+    height: 1.35rem;
+    font-size: .65rem;
+  }
+
+  /* Requirement: make the Starred icon (controlsStart, header's first .status-icon-row — see
+     the :last-of-type hiding rule above for why it's the only one spared) as compact as
+     possible and pin it to the header's far left edge with just slight padding. */
+  .q-item .accordion-header>.status-icon-row:first-of-type {
+    flex: 0 0 auto;
+    padding: 0 .3rem 0 .4rem;
+    margin: 0;
+  }
+
+  .q-item .accordion-header>.status-icon-row:first-of-type .icon-glyph {
+    width: 1.25rem;
+    height: 1.25rem;
+    font-size: .6rem;
   }
 
   /* Smoother, slightly slower collapse animation reads better at touch speed than Bootstrap's

@@ -2880,6 +2880,10 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
   /* ---- Answer view/edit ---- */
   const answerContent = document.createElement("div");
   answerContent.innerHTML = q.Answer; // trusted HTML answer content from CSV, rendered as-is
+  // Requirement: on mobile, opening a no-answer question should just expand an empty container,
+  // not visibly render whatever stray empty-but-non-blank markup (e.g. "<p></p>") the Answer
+  // cell might contain — style.css (mobile media query) hides anything carrying this class.
+  answerContent.classList.toggle("answer-content-empty", !(q.Answer && q.Answer.trim()));
 
   const editWrapper = document.createElement("div");
   editWrapper.style.display = "none";
@@ -2932,6 +2936,7 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
   saveBtn.addEventListener("click", () => {
     q.Answer = textarea.value;
     answerContent.innerHTML = q.Answer;
+    answerContent.classList.toggle("answer-content-empty", !(q.Answer && q.Answer.trim()));
     editBtn.textContent = q.Answer && q.Answer.trim() ? "Edit Answer" : "Add Answer";
     warnIcon.style.display = (q.Answer && q.Answer.trim()) ? "none" : "inline";
     persistCurrentProgress();
@@ -3005,10 +3010,15 @@ export function createQuestion(q, parentId, isTarget, selectionCtx, openMoveForm
   item.appendChild(collapse);
 
   // Requirement: opening a question that has no answer yet should drop straight into the
-  // answer textarea instead of showing an empty answer body with just an "Add Answer" button.
+  // answer textarea instead of showing an empty answer body with just an "Add Answer" button —
+  // EXCEPT on mobile, where the whole point of the read-only accordion (see the mobile media
+  // query in style.css) is that expanding a no-answer question should just show an empty
+  // container, not auto-open the "Text to HTML" link + textarea editor. matchMedia is checked
+  // live at expand time (not cached) so resizing/rotating between checks stays correct.
   collapse.addEventListener("shown.bs.collapse", e => {
     if (e.target !== collapse) return;
-    if (!(q.Answer && q.Answer.trim()) && editWrapper.style.display === "none") {
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+    if (!isMobile && !(q.Answer && q.Answer.trim()) && editWrapper.style.display === "none") {
       enterEditMode();
     }
   });
