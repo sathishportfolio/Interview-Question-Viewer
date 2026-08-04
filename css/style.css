@@ -1221,6 +1221,21 @@ body.edit-mode-off .subtopic-select-checkbox {
     display: none !important;
   }
 
+  /* Requirement: the header shouldn't stay pinned on mobile — it eats vertical space on an
+     already-small screen, so let it scroll away with the rest of the page instead of staying
+     fixed. watchHeaderHeight()/syncHeaderPadding() (js/components/timer.js) still runs on every
+     load/resize and sets body's padding-top as an inline style to leave room for the fixed
+     header on desktop — inline styles normally beat stylesheet rules, so this needs !important
+     to actually win and collapse that reserved space back down to nothing. */
+  .app-header {
+    position: static;
+    box-shadow: none;
+  }
+
+  body {
+    padding-top: 0 !important;
+  }
+
   /* Requirement: hide the Done/Review/Duplicate/Less/Star status cluster, the Move and Delete
      icons, the drag handle, and the bulk-select checkbox — everything editing-related in a
      question header except the three inline Question Actions inside the button itself (see
