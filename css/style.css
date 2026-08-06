@@ -1060,9 +1060,9 @@ body:not(.edit-mode-off) .q-index {
    js/components/stats.js — Plain/Structure/Hierarchy/etc., all real <button>s, unlike the
    badges themselves which are <span>s and so unaffected by this selector) are hidden while
    Edit Mode is OFF, same as every other body.edit-mode-off rule above. */
-body.edit-mode-off #globalStatsBadges button {
+/* body.edit-mode-off #globalStatsBadges button {
   display: none;
-}
+} */
 
 .floating-toggle-item .visually-hidden {
   position: absolute;
