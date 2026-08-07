@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(/bin/ls docs *)",
+      "Bash(/bin/cat .claude/settings.json)",
+      "Bash(/bin/cat .claude/settings.local.json)"
     ]
   }
 }
